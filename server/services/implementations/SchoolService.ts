@@ -24,4 +24,12 @@ export class SchoolService implements ISchoolService {
   async getCampusesBySchool(schoolId: number): Promise<Campus[]> {
     return this.campusRepo.getBySchoolId(schoolId);
   }
+
+  async createCampus(data: any): Promise<Campus> {
+    return this.campusRepo.create(data);
+  }
+
+  async updateCampus(id: number, data: any): Promise<Campus> {
+    return this.campusRepo.update(id, data);
+  }
 }

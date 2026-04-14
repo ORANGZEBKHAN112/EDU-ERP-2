@@ -7,6 +7,11 @@ export class RoleRepository implements IRoleRepository {
     const result = await pool.request()
       .input('name', sql.NVarChar, name)
       .query('SELECT * FROM Roles WHERE RoleName = @name');
-    return result.recordset[0];
+    const r = result.recordset[0];
+    if (!r) return undefined;
+    return {
+      id: r.RoleId || r.id,
+      name: r.RoleName
+    };
   }
 }

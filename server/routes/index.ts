@@ -23,6 +23,8 @@ const tenantCtrl = container.tenantController;
 const reconciliationCtrl = container.reconciliationController;
 const eventCtrl = container.financialEventController;
 const systemCtrl = container.systemController;
+const userCtrl = container.userController;
+const classCtrl = container.classController;
 
 // Controllers not yet refactored to Container (using legacy instantiation for now)
 const reportCtrl = new ReportController();
@@ -30,6 +32,11 @@ const workflowCtrl = new WorkflowController();
 
 // Auth
 router.post('/auth/login', authCtrl.login);
+
+// Users
+router.get('/users', authenticate, authorize(['SuperAdmin']), userCtrl.getUsers);
+router.post('/users', authenticate, authorize(['SuperAdmin']), userCtrl.createUser);
+router.get('/roles', authenticate, userCtrl.getRoles);
 
 // System Health
 router.get('/system/health', systemCtrl.getHealth);
@@ -49,6 +56,12 @@ router.post('/schools', authenticate, authorize(['SuperAdmin']), schoolCtrl.crea
 // Campuses
 router.get('/campuses', authenticate, campusCtrl.getCampuses);
 router.get('/campuses/:schoolId', authenticate, campusCtrl.getBySchool);
+router.post('/campuses', authenticate, authorize(['SuperAdmin']), campusCtrl.createCampus);
+router.put('/campuses/:id', authenticate, authorize(['SuperAdmin']), campusCtrl.updateCampus);
+
+// Classes
+router.get('/classes/:campusId', authenticate, classCtrl.getClasses);
+router.post('/classes', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), classCtrl.createClass);
 
 // Students
 router.get('/students', authenticate, checkCampusAccess, studentCtrl.getStudents);

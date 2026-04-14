@@ -3,7 +3,7 @@ import { Student } from '../../models';
 import { IStudentRepository } from '../../interfaces/repositories/IStudentRepository';
 
 export class StudentRepository implements IStudentRepository {
-  async getAll(campusIds?: number[], schoolId?: number): Promise<Student[]> {
+  async getAll(campusIds?: number[], schoolId?: number, filterCampusId?: number, search?: string): Promise<Student[]> {
     const pool = await poolPromise;
     let query = 'SELECT * FROM Students WHERE 1=1';
     const request = pool.request();
@@ -15,6 +15,16 @@ export class StudentRepository implements IStudentRepository {
 
     if (campusIds && campusIds.length > 0) {
       query += ' AND CampusId IN (' + campusIds.join(',') + ')';
+    }
+
+    if (filterCampusId) {
+      query += ' AND CampusId = @filterCampusId';
+      request.input('filterCampusId', sql.Int, filterCampusId);
+    }
+
+    if (search) {
+      query += ' AND (FullName LIKE @search OR AdmissionNo LIKE @search)';
+      request.input('search', sql.NVarChar, `%${search}%`);
     }
     
     const result = await request.query(query);

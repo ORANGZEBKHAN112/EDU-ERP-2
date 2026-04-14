@@ -9,7 +9,9 @@ export class StudentController {
     try {
       const campusIds = req.user.campusIds;
       const schoolId = req.user.schoolId;
-      const students = await this.studentService.getAllStudents(campusIds, schoolId);
+      const filterCampusId = req.query.campusId ? parseInt(req.query.campusId as string) : undefined;
+      const search = req.query.search as string;
+      const students = await this.studentService.getAllStudents(campusIds, schoolId, filterCampusId, search);
       res.json(students);
     } catch (err) {
       next(err);

@@ -31,9 +31,9 @@ export class SchoolRepository implements ISchoolRepository {
     };
   }
 
-  async create(item: Partial<School>): Promise<School> {
-    const pool = await poolPromise;
-    const result = await pool.request()
+  async create(item: Partial<School>, transaction?: sql.Transaction): Promise<School> {
+    const request = transaction ? new sql.Request(transaction) : (await poolPromise).request();
+    const result = await request
       .input('name', sql.NVarChar, item.name)
       .input('country', sql.NVarChar, item.country)
       .query('INSERT INTO Schools (SchoolName, Country) OUTPUT INSERTED.* VALUES (@name, @country)');

@@ -13,4 +13,14 @@ export class CampusController {
     const campuses = await this.schoolService.getCampusesBySchool(parseInt(req.params.schoolId));
     res.json(campuses);
   };
+
+  createCampus = async (req: Request, res: Response) => {
+    const campus = await this.schoolService.createCampus(req.body);
+    res.json(campus);
+  };
+
+  updateCampus = async (req: Request, res: Response) => {
+    const campus = await this.schoolService.updateCampus(parseInt(req.params.id), req.body);
+    res.json(campus);
+  };
 }

@@ -14,6 +14,7 @@ import { FinancialTraceRepository } from './repositories/implementations/Financi
 import { FailedTransactionRepository } from './repositories/implementations/FailedTransactionRepository';
 import { SystemRepository } from './repositories/implementations/SystemRepository';
 import { UsageRepository } from './repositories';
+import { ClassRepository } from './repositories/implementations/ClassRepository';
 
 // Services
 import { AuthService } from './services/implementations/AuthService';
@@ -41,6 +42,8 @@ import { TenantController } from './controllers/implementations/TenantController
 import { ReconciliationController } from './controllers/implementations/ReconciliationController';
 import { FinancialEventController } from './controllers/implementations/FinancialEventController';
 import { SystemController } from './controllers/implementations/SystemController';
+import { UserController } from './controllers/implementations/UserController';
+import { ClassController } from './controllers/implementations/ClassController';
 
 export class DependencyContainer {
   // Repositories
@@ -60,6 +63,7 @@ export class DependencyContainer {
   public jobRepo = new JobRepository();
   public usageRepo = new UsageRepository();
   public subRepo = new SubscriptionRepository();
+  public classRepo = new ClassRepository();
 
   // Services
   public authService = new AuthService(this.userRepo);
@@ -93,6 +97,8 @@ export class DependencyContainer {
   public reconciliationController = new ReconciliationController(this.reconciliationService);
   public financialEventController = new FinancialEventController();
   public systemController = new SystemController(this.healthService);
+  public userController = new UserController(this.userRepo, this.roleRepo);
+  public classController = new ClassController(this.classRepo);
 }
 
 export const container = new DependencyContainer();

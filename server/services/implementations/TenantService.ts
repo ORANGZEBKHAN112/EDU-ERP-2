@@ -27,10 +27,16 @@ export class TenantService {
   }) {
     const txManager = await TransactionManager.startTransaction();
     try {
+      // Check if email already exists
+      const existingUser = await this.userRepo.getByEmail(data.adminEmail);
+      if (existingUser) {
+        throw new Error('Admin email already exists in the system');
+      }
+
       const school = await this.schoolRepo.create({
         name: data.schoolName,
         country: data.country
-      });
+      }, txManager.transaction);
 
       const campus = await this.campusRepo.create({
         schoolId: school.id,
@@ -38,7 +44,7 @@ export class TenantService {
         state: 'Default',
         city: 'Default',
         address: 'Default'
-      });
+      }, txManager.transaction);
 
       const passwordHash = await bcrypt.hash('Admin@123', 10);
       const user = await this.userRepo.create({
@@ -51,7 +57,7 @@ export class TenantService {
 
       const adminRole = await this.roleRepo.getByName('SuperAdmin');
       if (adminRole) {
-        await this.userRepo.addUserRole(user.id, adminRole.id || adminRole.RoleId, txManager.transaction);
+        await this.userRepo.addUserRole(user.id, adminRole.id, txManager.transaction);
       }
 
       await this.userRepo.addUserCampus(user.id, campus.id, txManager.transaction);
@@ -80,6 +86,7 @@ export class TenantService {
       await txManager.commit();
       return { school, admin: user };
     } catch (error) {
+      console.error('Onboarding failed:', error);
       await txManager.rollback();
       throw error;
     }

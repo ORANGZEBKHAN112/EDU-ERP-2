@@ -113,4 +113,21 @@ export class UserRepository implements IUserRepository {
       isActive: r.IsActive
     }));
   }
+
+  async getUsersBySchool(schoolId: number): Promise<User[]> {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('schoolId', sql.Int, schoolId)
+      .query('SELECT * FROM Users WHERE SchoolId = @schoolId');
+    return result.recordset.map(r => ({
+      id: r.UserId,
+      schoolId: r.SchoolId,
+      fullName: r.FullName,
+      email: r.Email,
+      passwordHash: r.PasswordHash,
+      phone: r.Phone,
+      isActive: r.IsActive,
+      createdAt: r.CreatedAt
+    }));
+  }
 }
