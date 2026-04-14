@@ -1,17 +1,18 @@
 import cron from 'node-cron';
-import { VoucherGeneratorService } from './VoucherGeneratorService';
+import { container } from '../../container';
 import { FineEngineService } from './FineEngineService';
 import { ReconciliationService } from '../reconciliation/ReconciliationService';
 import { AuditService, AuditAction } from '../auditService';
 import { JobRepository } from '../../repositories';
 import { poolPromise } from '../../config/db';
 import os from 'os';
+import { RequestContext } from '../../dtos/fee.dto';
 
 export class FeeSchedulerService {
-  private voucherGenerator = new VoucherGeneratorService();
-  private fineEngine = new FineEngineService();
-  private reconciliation = new ReconciliationService();
-  private jobRepo = new JobRepository();
+  private feeService = container.feeService;
+  private reconciliation = container.reconciliationService;
+  private fineEngine = container.fineEngineService;
+  private jobRepo = container.jobRepo;
   private instanceId = `${os.hostname()}-${process.pid}`;
 
   init() {
@@ -21,11 +22,16 @@ export class FeeSchedulerService {
         const currentMonth = new Date().toISOString().slice(0, 7);
         const systemUserId = 0;
         const pool = await poolPromise;
-        const campuses = await pool.request().query('SELECT CampusId FROM Campuses WHERE IsActive = 1');
+        const campuses = await pool.request().query('SELECT CampusId, SchoolId FROM Campuses WHERE IsActive = 1');
         
         for (const campus of campuses.recordset) {
           console.log(`[Scheduler] Generating vouchers for Campus ID: ${campus.CampusId}`);
-          await this.voucherGenerator.generateForCampus(campus.CampusId, currentMonth, systemUserId);
+          const ctx: RequestContext = {
+            schoolId: campus.SchoolId,
+            campusIds: [campus.CampusId],
+            userId: systemUserId
+          };
+          await this.feeService.generateVouchers(ctx, { campusId: campus.CampusId, month: currentMonth });
         }
       });
     });
@@ -43,7 +49,23 @@ export class FeeSchedulerService {
     cron.schedule('0 2 * * *', async () => {
       await this.runDistributedJob('DailyReconciliation', async () => {
         const systemUserId = 0;
-        await this.reconciliation.runGlobalReconciliation(systemUserId);
+        const ctx: RequestContext = {
+          schoolId: 0,
+          campusIds: [], // Empty means all campuses for system user
+          userId: systemUserId
+        };
+        await this.reconciliation.runDailyReconciliation(ctx);
+      });
+    });
+
+    // 4. Hourly Failure Recovery: Runs at minute 30 of every hour
+    cron.schedule('30 * * * *', async () => {
+      await this.runDistributedJob('FailureRecovery', async () => {
+        const recovery = container.recoveryService;
+        console.log('[Scheduler] Running Failure Detection...');
+        await recovery.detectInconsistencies();
+        console.log('[Scheduler] Processing Failed Transaction Queue...');
+        await recovery.processQueue();
       });
     });
 

@@ -26,6 +26,10 @@ import apiClient from './services/apiClient';
 import StudentList from './components/StudentList';
 import CampusList from './components/CampusList';
 import FeeManagement from './components/FeeManagement';
+import VoucherList from './components/VoucherList';
+import UserRoleManagement from './components/UserRoleManagement';
+import SchoolManagement from './components/SchoolManagement';
+import ErrorBoundary from './components/ErrorBoundary';
 import { Student, School as SchoolType } from './types';
 
 interface UserPayload {
@@ -298,159 +302,194 @@ export default function App() {
         </header>
 
         <div className="p-8 max-w-7xl mx-auto">
-          <AnimatePresence mode="wait">
-            {activeTab === 'dashboard' && (
-              <motion.div
-                key="dashboard"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-8"
-              >
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {[
-                    { label: 'Total Revenue', value: `$${stats?.totalRevenue || 0}`, icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: '+12.5%', isUp: true },
-                    { label: 'Total Schools', value: stats?.totalSchools || 0, icon: School, color: 'text-blue-600', bg: 'bg-blue-50', trend: '+2', isUp: true, hide: !isSuperAdmin },
-                    { label: 'Total Campuses', value: stats?.totalCampuses || 0, icon: Building2, color: 'text-purple-600', bg: 'bg-purple-50', trend: '+5', isUp: true },
-                    { label: 'Total Students', value: stats?.totalStudents || 0, icon: GraduationCap, color: 'text-orange-600', bg: 'bg-orange-50', trend: '+150', isUp: true },
-                    { label: 'Collection Rate', value: `${stats?.collectionRate || 0}%`, icon: Receipt, color: 'text-indigo-600', bg: 'bg-indigo-50', trend: '+3%', isUp: true, hide: isSuperAdmin },
-                  ].filter(s => !s.hide).map((stat, i) => (
-                    <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow group">
-                      <div className="flex items-start justify-between">
-                        <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
-                          <stat.icon size={24} />
+          <ErrorBoundary>
+            <AnimatePresence mode="wait">
+              {activeTab === 'dashboard' && (
+                <motion.div
+                  key="dashboard"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="space-y-8"
+                >
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[
+                      { label: 'Total Revenue', value: `$${stats?.totalRevenue || 0}`, icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: '+12.5%', isUp: true },
+                      { label: 'Total Schools', value: stats?.totalSchools || 0, icon: School, color: 'text-blue-600', bg: 'bg-blue-50', trend: '+2', isUp: true, hide: !isSuperAdmin },
+                      { label: 'Total Campuses', value: stats?.totalCampuses || 0, icon: Building2, color: 'text-purple-600', bg: 'bg-purple-50', trend: '+5', isUp: true },
+                      { label: 'Total Students', value: stats?.totalStudents || 0, icon: GraduationCap, color: 'text-orange-600', bg: 'bg-orange-50', trend: '+150', isUp: true },
+                      { label: 'Collection Rate', value: `${stats?.collectionRate || 0}%`, icon: Receipt, color: 'text-indigo-600', bg: 'bg-indigo-50', trend: '+3%', isUp: true, hide: isSuperAdmin },
+                    ].filter(s => !s.hide).map((stat, i) => (
+                      <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow group">
+                        <div className="flex items-start justify-between">
+                          <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
+                            <stat.icon size={24} />
+                          </div>
+                          <div className={`flex items-center text-xs font-bold px-2 py-1 rounded-full ${stat.isUp ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                            {stat.isUp ? <ArrowUpRight size={14} className="mr-1" /> : <ArrowDownRight size={14} className="mr-1" />}
+                            {stat.trend}
+                          </div>
                         </div>
-                        <div className={`flex items-center text-xs font-bold px-2 py-1 rounded-full ${stat.isUp ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                          {stat.isUp ? <ArrowUpRight size={14} className="mr-1" /> : <ArrowDownRight size={14} className="mr-1" />}
-                          {stat.trend}
+                        <div className="mt-4">
+                          <h3 className="text-slate-500 text-sm font-medium">{stat.label}</h3>
+                          <p className="text-2xl font-bold text-slate-900 mt-1">{stat.value}</p>
                         </div>
                       </div>
-                      <div className="mt-4">
-                        <h3 className="text-slate-500 text-sm font-medium">{stat.label}</h3>
-                        <p className="text-2xl font-bold text-slate-900 mt-1">{stat.value}</p>
+                    ))}
+                  </div>
+
+                  {/* Recent Activity & Schools */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                      <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                        <h2 className="text-lg font-bold text-slate-800">{isSuperAdmin ? 'Schools Overview' : 'Campus Performance'}</h2>
+                        <button className="text-sm text-blue-600 font-semibold hover:underline">View All</button>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                          <thead>
+                            <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                              <th className="px-6 py-4">{isSuperAdmin ? 'School Name' : 'Campus Name'}</th>
+                              <th className="px-6 py-4">{isSuperAdmin ? 'Country' : 'Students'}</th>
+                              <th className="px-6 py-4">Status</th>
+                              <th className="px-6 py-4">Created At</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {isSuperAdmin ? schools.map((school) => (
+                              <tr key={school.id} className="hover:bg-slate-50 transition-colors">
+                                <td className="px-6 py-4 font-medium text-slate-900">{school.name}</td>
+                                <td className="px-6 py-4 text-slate-600">{school.country}</td>
+                                <td className="px-6 py-4">
+                                  <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${school.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>
+                                    {school.isActive ? 'Active' : 'Inactive'}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-slate-500 text-sm">{new Date(school.createdAt).toLocaleDateString()}</td>
+                              </tr>
+                            )) : (
+                              <tr className="hover:bg-slate-50 transition-colors">
+                                <td className="px-6 py-4 font-medium text-slate-900">Main Campus</td>
+                                <td className="px-6 py-4 text-slate-600">{stats?.totalStudents || 0}</td>
+                                <td className="px-6 py-4">
+                                  <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700">Active</span>
+                                </td>
+                                <td className="px-6 py-4 text-slate-500 text-sm">2024-01-15</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
-                  ))}
-                </div>
 
-                {/* Recent Activity & Schools */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                      <h2 className="text-lg font-bold text-slate-800">{isSuperAdmin ? 'Schools Overview' : 'Campus Performance'}</h2>
-                      <button className="text-sm text-blue-600 font-semibold hover:underline">View All</button>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left">
-                        <thead>
-                          <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
-                            <th className="px-6 py-4">{isSuperAdmin ? 'School Name' : 'Campus Name'}</th>
-                            <th className="px-6 py-4">{isSuperAdmin ? 'Country' : 'Students'}</th>
-                            <th className="px-6 py-4">Status</th>
-                            <th className="px-6 py-4">Created At</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {isSuperAdmin ? schools.map((school) => (
-                            <tr key={school.id} className="hover:bg-slate-50 transition-colors">
-                              <td className="px-6 py-4 font-medium text-slate-900">{school.name}</td>
-                              <td className="px-6 py-4 text-slate-600">{school.country}</td>
-                              <td className="px-6 py-4">
-                                <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${school.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>
-                                  {school.isActive ? 'Active' : 'Inactive'}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-slate-500 text-sm">{new Date(school.createdAt).toLocaleDateString()}</td>
-                            </tr>
-                          )) : (
-                            <tr className="hover:bg-slate-50 transition-colors">
-                              <td className="px-6 py-4 font-medium text-slate-900">Main Campus</td>
-                              <td className="px-6 py-4 text-slate-600">{stats?.totalStudents || 0}</td>
-                              <td className="px-6 py-4">
-                                <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700">Active</span>
-                              </td>
-                              <td className="px-6 py-4 text-slate-500 text-sm">2024-01-15</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                      <h2 className="text-lg font-bold text-slate-800 mb-6">Recent Students</h2>
+                      <div className="space-y-6">
+                        {(students || []).slice(0, 5).map((student) => (
+                          <div key={student.id} className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold">
+                              {student.fullName.charAt(0)}
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="text-sm font-bold text-slate-900">{student.fullName}</h4>
+                              <p className="text-xs text-slate-500">{student.admissionNo} • Grade {student.classId}</p>
+                            </div>
+                            <span className="text-xs font-medium text-slate-400">Just now</span>
+                          </div>
+                        ))}
+                        {(!students || students.length === 0) && (
+                          <p className="text-center text-slate-400 py-8">No recent students</p>
+                        )}
+                      </div>
+                      <button 
+                        onClick={() => setActiveTab('students')}
+                        className="w-full mt-8 py-3 bg-slate-50 text-slate-600 text-sm font-bold rounded-xl hover:bg-slate-100 transition-colors"
+                      >
+                        View All Students
+                      </button>
                     </div>
                   </div>
+                </motion.div>
+              )}
 
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                    <h2 className="text-lg font-bold text-slate-800 mb-6">Recent Students</h2>
-                    <div className="space-y-6">
-                      {students.slice(0, 5).map((student) => (
-                        <div key={student.id} className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold">
-                            {student.fullName.charAt(0)}
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="text-sm font-bold text-slate-900">{student.fullName}</h4>
-                            <p className="text-xs text-slate-500">{student.admissionNo} • Grade {student.classId}</p>
-                          </div>
-                          <span className="text-xs font-medium text-slate-400">Just now</span>
-                        </div>
-                      ))}
-                      {students.length === 0 && (
-                        <p className="text-center text-slate-400 py-8">No recent students</p>
-                      )}
-                    </div>
-                    <button 
-                      onClick={() => setActiveTab('students')}
-                      className="w-full mt-8 py-3 bg-slate-50 text-slate-600 text-sm font-bold rounded-xl hover:bg-slate-100 transition-colors"
-                    >
-                      View All Students
-                    </button>
+              {activeTab === 'students' && (
+                <motion.div
+                  key="students"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <StudentList />
+                </motion.div>
+              )}
+
+              {activeTab === 'campuses' && (
+                <motion.div
+                  key="campuses"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <CampusList />
+                </motion.div>
+              )}
+
+              {activeTab === 'fees' && (
+                <motion.div
+                  key="fees"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <FeeManagement />
+                </motion.div>
+              )}
+
+              {activeTab === 'vouchers' && (
+                <motion.div
+                  key="vouchers"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <VoucherList />
+                </motion.div>
+              )}
+
+              {activeTab === 'users' && (
+                <motion.div
+                  key="users"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <UserRoleManagement />
+                </motion.div>
+              )}
+
+              {activeTab === 'schools' && (
+                <motion.div
+                  key="schools"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <SchoolManagement />
+                </motion.div>
+              )}
+
+              {['settings'].includes(activeTab) && (
+                <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                  <div className="p-6 bg-slate-100 rounded-full mb-4">
+                    <Settings size={48} />
                   </div>
+                  <h3 className="text-xl font-bold text-slate-800">Module Under Development</h3>
+                  <p className="mt-2">This module is part of the ERP roadmap and will be available soon.</p>
                 </div>
-              </motion.div>
-            )}
-
-            {activeTab === 'students' && (
-              <motion.div
-                key="students"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-              >
-                <StudentList />
-              </motion.div>
-            )}
-
-            {activeTab === 'campuses' && (
-              <motion.div
-                key="campuses"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-              >
-                <CampusList />
-              </motion.div>
-            )}
-
-            {activeTab === 'fees' && (
-              <motion.div
-                key="fees"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-              >
-                <FeeManagement />
-              </motion.div>
-            )}
-
-            {['vouchers', 'users', 'settings', 'schools'].includes(activeTab) && (
-              <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                <div className="p-6 bg-slate-100 rounded-full mb-4">
-                  <Settings size={48} />
-                </div>
-                <h3 className="text-xl font-bold text-slate-800">Module Under Development</h3>
-                <p className="mt-2">This module is part of the ERP roadmap and will be available soon.</p>
-              </div>
-            )}
-          </AnimatePresence>
+              )}
+            </AnimatePresence>
+          </ErrorBoundary>
         </div>
       </main>
     </div>

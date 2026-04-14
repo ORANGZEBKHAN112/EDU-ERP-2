@@ -1,49 +1,44 @@
 import { Router } from 'express';
 import { 
-  SchoolController, 
-  CampusController, 
-  StudentController, 
-  FeeController, 
-  PaymentController, 
-  DashboardController,
-  WorkflowController,
-  ReconciliationController,
-  FinancialEventController,
-  TenantController,
-  SystemController
+  WorkflowController, 
+  ReconciliationController, 
+  FinancialEventController, 
+  SystemController 
 } from '../controllers';
 import { ReportController } from '../controllers/reportController';
-import { AuthController } from '../controllers/authController';
 import { authenticate, authorize, checkCampusAccess, checkSubscription, quotaCheck } from '../middleware';
+import { container } from '../container';
 
 const router = Router();
 
-const authCtrl = new AuthController();
-const schoolCtrl = new SchoolController();
-const campusCtrl = new CampusController();
-const studentCtrl = new StudentController();
-const feeCtrl = new FeeController();
-const paymentCtrl = new PaymentController();
-const dashboardCtrl = new DashboardController();
+// Controllers from Container
+const authCtrl = container.authController;
+const schoolCtrl = container.schoolController;
+const campusCtrl = container.campusController;
+const studentCtrl = container.studentController;
+const feeCtrl = container.feeController;
+const paymentCtrl = container.paymentController;
+const dashboardCtrl = container.dashboardController;
+const tenantCtrl = container.tenantController;
+const reconciliationCtrl = container.reconciliationController;
+const eventCtrl = container.financialEventController;
+const systemCtrl = container.systemController;
+
+// Controllers not yet refactored to Container (using legacy instantiation for now)
 const reportCtrl = new ReportController();
 const workflowCtrl = new WorkflowController();
-const reconciliationCtrl = new ReconciliationController();
-const eventCtrl = new FinancialEventController();
-const tenantCtrl = new TenantController();
-const systemCtrl = new SystemController();
 
 // Auth
 router.post('/auth/login', authCtrl.login);
 
-// System Health (Public or SaaS Admin)
+// System Health
 router.get('/system/health', systemCtrl.getHealth);
 
-// Tenants (SaaS Admin)
+// Tenants
 router.get('/tenants', authenticate, authorize(['SuperAdmin']), tenantCtrl.getTenants);
 router.post('/tenants/create', authenticate, authorize(['SuperAdmin']), tenantCtrl.createTenant);
 router.get('/tenants/:id/status', authenticate, authorize(['SuperAdmin']), tenantCtrl.getStatus);
 
-// Apply subscription check to all subsequent routes
 router.use(checkSubscription);
 router.use(quotaCheck);
 
@@ -57,10 +52,14 @@ router.get('/campuses/:schoolId', authenticate, campusCtrl.getBySchool);
 
 // Students
 router.get('/students', authenticate, checkCampusAccess, studentCtrl.getStudents);
+router.get('/students/:id', authenticate, checkCampusAccess, studentCtrl.getStudentById);
 router.post('/students', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), studentCtrl.createStudent);
+router.put('/students/:id', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), studentCtrl.updateStudent);
+router.delete('/students/:id', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), studentCtrl.deleteStudent);
 
 // Fees
 router.post('/fees/generate-vouchers', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), checkCampusAccess, feeCtrl.generateVouchers);
+router.get('/fees/ledger/:studentId', authenticate, checkCampusAccess, feeCtrl.getLedger);
 
 // Payments
 router.post('/payments/initiate', authenticate, paymentCtrl.initiate);
@@ -80,7 +79,7 @@ router.post('/workflow/monthly-job', authenticate, authorize(['SuperAdmin']), wo
 router.post('/workflow/apply-fines', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), workflowCtrl.applyFines);
 
 // Reconciliation
-router.post('/reconciliation/run', authenticate, authorize(['SuperAdmin']), reconciliationCtrl.runGlobal);
+router.post('/reconciliation/run', authenticate, authorize(['SuperAdmin']), reconciliationCtrl.runReconciliation);
 router.get('/reconciliation/reports', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), reconciliationCtrl.getReports);
 
 // Events

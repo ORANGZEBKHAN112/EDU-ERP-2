@@ -1,19 +1,24 @@
-import { FeeRepository, StudentRepository } from '../repositories';
-import { VoucherGeneratorService, FineEngineService } from './feeEngine';
+import { container } from '../container';
 import { poolPromise } from '../config/db';
+import { RequestContext } from '../dtos/fee.dto';
 
 export class WorkflowService {
-  private voucherGenerator = new VoucherGeneratorService();
-  private fineEngine = new FineEngineService();
+  private feeService = container.feeService;
+  private fineEngine = container.fineEngineService;
 
   async runMonthlyVoucherGeneration(month: string, userId: number) {
     const pool = await poolPromise;
-    const campuses = await pool.request().query('SELECT CampusId FROM Campuses WHERE IsActive = 1');
+    const campuses = await pool.request().query('SELECT CampusId, SchoolId FROM Campuses WHERE IsActive = 1');
     
     const results = [];
     for (const campus of campuses.recordset) {
       try {
-        const generated = await this.voucherGenerator.generateForCampus(campus.CampusId, month, userId);
+        const ctx: RequestContext = {
+          schoolId: campus.SchoolId,
+          campusIds: [campus.CampusId],
+          userId: userId
+        };
+        const generated = await this.feeService.generateVouchers(ctx, { campusId: campus.CampusId, month });
         results.push({ campusId: campus.CampusId, status: 'Success', count: generated.length });
       } catch (err) {
         results.push({ campusId: campus.CampusId, status: 'Failed', error: err instanceof Error ? err.message : String(err) });

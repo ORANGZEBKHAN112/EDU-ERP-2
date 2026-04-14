@@ -14,6 +14,15 @@ export const createStudentSchema = z.object({
   phone: z.string().optional(),
 });
 
+export const updateStudentSchema = z.object({
+  campusId: z.number().optional(),
+  classId: z.number().optional(),
+  fullName: z.string().min(2).optional(),
+  fatherName: z.string().min(2).optional(),
+  phone: z.string().optional(),
+  isActive: z.boolean().optional(),
+});
+
 export const generateVouchersSchema = z.object({
   campusId: z.number(),
   month: z.string().regex(/^\d{4}-\d{2}$/, "Format must be YYYY-MM"),

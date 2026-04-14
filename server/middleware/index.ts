@@ -1,12 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuthService } from '../services/authService';
-import { SubscriptionRepository, UsageRepository } from '../repositories';
+import { container } from '../container';
 import { AppError } from '../utils/errors';
 import { ZodError } from 'zod';
 
-const authService = new AuthService();
-const subRepo = new SubscriptionRepository();
-const usageRepo = new UsageRepository();
+const authService = container.authService;
+const subRepo = container.subRepo;
+const usageRepo = container.usageRepo;
 
 export const authenticate = (req: any, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
