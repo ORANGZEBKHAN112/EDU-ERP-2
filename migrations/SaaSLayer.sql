@@ -29,6 +29,11 @@ END
 
 -- Ensure SchoolId exists on all major entities if not already there
 -- (Assuming Schools table is the root tenant)
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'SchoolId')
+BEGIN
+    ALTER TABLE Users ADD SchoolId INT NULL;
+END
+
 -- Adding indexes for tenant isolation performance
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Campuses_SchoolId' AND object_id = OBJECT_ID('Campuses'))
 BEGIN

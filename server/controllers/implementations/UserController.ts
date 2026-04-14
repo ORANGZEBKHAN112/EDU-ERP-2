@@ -12,20 +12,31 @@ export class UserController {
   getUsers = async (req: any, res: Response, next: NextFunction) => {
     try {
       const schoolId = req.user.schoolId;
+      console.log('Fetching users for schoolId:', schoolId);
       const users = await this.userRepo.getUsersBySchool(schoolId);
       
       const usersWithDetails = await Promise.all(users.map(async (u) => {
-        const roles = await this.userRepo.getUserRoles(u.id);
-        const campuses = await this.userRepo.getUserCampuses(u.id);
-        return {
-          ...u,
-          roles: roles.map(r => r.name),
-          campusIds: campuses.map(c => c.id)
-        };
+        try {
+          const roles = await this.userRepo.getUserRoles(u.id);
+          const campuses = await this.userRepo.getUserCampuses(u.id);
+          return {
+            ...u,
+            roles: roles.map(r => r.name),
+            campusIds: campuses.map(c => c.id)
+          };
+        } catch (err) {
+          console.error(`Failed to fetch details for user ${u.id}:`, err);
+          return {
+            ...u,
+            roles: [],
+            campusIds: []
+          };
+        }
       }));
 
       res.json(usersWithDetails);
     } catch (err) {
+      console.error('getUsers failed:', err);
       next(err);
     }
   };

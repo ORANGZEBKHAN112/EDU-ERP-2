@@ -31,16 +31,18 @@ export default function UserManagementPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [usersRes, campusesRes, rolesRes] = await Promise.all([
-        apiClient.get('/users'),
-        apiClient.get('/campuses'),
-        apiClient.get('/roles')
-      ]);
+      const usersRes = await apiClient.get('/users');
       setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
+      
+      const campusesRes = await apiClient.get('/campuses');
       setCampuses(Array.isArray(campusesRes.data) ? campusesRes.data : []);
+      
+      const rolesRes = await apiClient.get('/roles');
       setRoles(Array.isArray(rolesRes.data) ? rolesRes.data : []);
-    } catch (error) {
-      toast.error('Failed to load user management data');
+    } catch (error: any) {
+      console.error('Data loading error:', error);
+      const message = error.response?.data?.message || error.message || 'Failed to load user management data';
+      toast.error(message);
     } finally {
       setLoading(false);
     }

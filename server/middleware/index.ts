@@ -66,7 +66,9 @@ export const authorize = (roles: string[]) => {
   return (req: any, res: Response, next: NextFunction) => {
     if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
     
-    const hasRole = req.user.roles.some((role: string) => roles.includes(role));
+    const userRoles = req.user.roles || (req.user.role ? [req.user.role] : []);
+    const hasRole = userRoles.some((role: string) => roles.includes(role));
+    
     if (!hasRole) {
       return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
     }

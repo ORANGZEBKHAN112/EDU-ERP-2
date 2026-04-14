@@ -114,11 +114,19 @@ export class UserRepository implements IUserRepository {
     }));
   }
 
-  async getUsersBySchool(schoolId: number): Promise<User[]> {
+  async getUsersBySchool(schoolId: number | null): Promise<User[]> {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('schoolId', sql.Int, schoolId)
-      .query('SELECT * FROM Users WHERE SchoolId = @schoolId');
+    const request = pool.request();
+    let query = 'SELECT * FROM Users';
+    
+    if (schoolId) {
+      request.input('schoolId', sql.Int, schoolId);
+      query += ' WHERE SchoolId = @schoolId';
+    } else {
+      query += ' WHERE SchoolId IS NULL';
+    }
+    
+    const result = await request.query(query);
     return result.recordset.map(r => ({
       id: r.UserId,
       schoolId: r.SchoolId,
