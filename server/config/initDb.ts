@@ -6,57 +6,45 @@ export async function initializeDatabase() {
   const pool = await poolPromise;
   
   console.log('Checking database initialization...');
-  try {
-    const seedScriptPath = path.join(process.cwd(), 'migrations', 'SeedData.sql');
-    const seedScript = fs.readFileSync(seedScriptPath, 'utf8');
-    
-    // Execute as a single batch. Seed script handles its own existence checks.
-    await pool.request().batch(seedScript);
-    
-    const upgradeScriptPath = path.join(process.cwd(), 'migrations', 'UpgradeFeeEngine.sql');
-    if (fs.existsSync(upgradeScriptPath)) {
-      const upgradeScript = fs.readFileSync(upgradeScriptPath, 'utf8');
-      await pool.request().batch(upgradeScript);
-    }
+  
+  const migrations = [
+    'CreateTables.sql',
+    'SeedData.sql',
+    'SaaSLayer.sql',
+    'BankingGradeUpgrade.sql',
+    'AddFinancialTraceTable.sql',
+    'AddFailureRecoveryTables.sql',
+    'DurableEvents.sql',
+    'HardenEvents.sql',
+    'SaaSProductionLayer.sql',
+    'UpgradeFeeEngine.sql',
+    'DashboardOptimization.sql'
+  ];
 
-    const bankingUpgradePath = path.join(process.cwd(), 'migrations', 'BankingGradeUpgrade.sql');
-    if (fs.existsSync(bankingUpgradePath)) {
-      const bankingUpgrade = fs.readFileSync(bankingUpgradePath, 'utf8');
-      await pool.request().batch(bankingUpgrade);
+  for (const file of migrations) {
+    try {
+      const filePath = path.join(process.cwd(), 'migrations', file);
+      if (!fs.existsSync(filePath)) continue;
+      
+      const sqlContent = fs.readFileSync(filePath, 'utf8');
+      const batches = sqlContent.split(/^\s*GO\s*$/im);
+      
+      for (const batch of batches) {
+        const trimmedBatch = batch.trim();
+        if (trimmedBatch) {
+          await pool.request().batch(trimmedBatch);
+        }
+      }
+    } catch (err: any) {
+      // Ignore "already exists" errors during auto-init
+      if (!err.message.includes('already an object named') && 
+          !err.message.includes('already exists') &&
+          !err.message.includes('Column names in each table must be unique') &&
+          !err.message.includes('There is already an index')) {
+        console.error(`Error during migration ${file}:`, err.message);
+      }
     }
-
-    const durableEventsPath = path.join(process.cwd(), 'migrations', 'DurableEvents.sql');
-    if (fs.existsSync(durableEventsPath)) {
-      const durableEvents = fs.readFileSync(durableEventsPath, 'utf8');
-      await pool.request().batch(durableEvents);
-    }
-
-    const hardenEventsPath = path.join(process.cwd(), 'migrations', 'HardenEvents.sql');
-    if (fs.existsSync(hardenEventsPath)) {
-      const hardenEvents = fs.readFileSync(hardenEventsPath, 'utf8');
-      await pool.request().batch(hardenEvents);
-    }
-
-    const dashboardOptPath = path.join(process.cwd(), 'migrations', 'DashboardOptimization.sql');
-    if (fs.existsSync(dashboardOptPath)) {
-      const dashboardOpt = fs.readFileSync(dashboardOptPath, 'utf8');
-      await pool.request().batch(dashboardOpt);
-    }
-
-    const saasLayerPath = path.join(process.cwd(), 'migrations', 'SaaSLayer.sql');
-    if (fs.existsSync(saasLayerPath)) {
-      const saasLayer = fs.readFileSync(saasLayerPath, 'utf8');
-      await pool.request().batch(saasLayer);
-    }
-
-    const saasProdLayerPath = path.join(process.cwd(), 'migrations', 'SaaSProductionLayer.sql');
-    if (fs.existsSync(saasProdLayerPath)) {
-      const saasProdLayer = fs.readFileSync(saasProdLayerPath, 'utf8');
-      await pool.request().batch(saasProdLayer);
-    }
-    
-    console.log('Database initialization/seed check completed.');
-  } catch (err) {
-    console.error('Error during database initialization:', err);
   }
+  
+  console.log('Database initialization/seed check completed.');
 }

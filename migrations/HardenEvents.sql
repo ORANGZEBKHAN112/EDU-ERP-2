@@ -2,7 +2,7 @@
 ALTER TABLE FinancialEvents ADD LockedBy NVARCHAR(100) NULL;
 ALTER TABLE FinancialEvents ADD LockedAt DATETIME NULL;
 ALTER TABLE FinancialEvents ADD IsDeadLetter BIT DEFAULT 0;
-ALTER TABLE FinancialEvents ADD SequenceNumber BIGINT IDENTITY(1,1);
+ALTER TABLE FinancialEvents ADD SequenceNumber BIGINT;
 
 CREATE INDEX IX_FinancialEvents_Sequence ON FinancialEvents(SequenceNumber);
 CREATE INDEX IX_FinancialEvents_Lock ON FinancialEvents(LockedBy, LockedAt);

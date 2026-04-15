@@ -1,15 +1,15 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import apiRoutes from "./server/routes";
 import { errorHandler } from "./server/middleware";
-import dotenv from "dotenv";
 import { poolPromise } from "./server/config/db";
 import { initializeDatabase } from "./server/config/initDb";
 import { FeeSchedulerService } from "./server/services/feeEngine";
 import { EventProcessorService } from "./server/services/events/EventProcessorService";
-
-dotenv.config();
 
 async function startServer() {
   // Ensure DB connection

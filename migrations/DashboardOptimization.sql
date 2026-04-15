@@ -22,7 +22,7 @@ BEGIN
     CREATE INDEX IX_StudentFeeLedger_Month_Status ON StudentFeeLedger(Month, Status);
 END
 
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_FeePayments_CreatedAt' AND object_id = OBJECT_ID('FeePayments'))
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Payments_PaidAt' AND object_id = OBJECT_ID('Payments'))
 BEGIN
-    CREATE INDEX IX_FeePayments_CreatedAt ON FeePayments(CreatedAt);
+    CREATE INDEX IX_Payments_PaidAt ON Payments(PaidAt);
 END

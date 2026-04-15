@@ -3,10 +3,6 @@ import { container } from '../container';
 import { AppError } from '../utils/errors';
 import { ZodError } from 'zod';
 
-const authService = container.authService;
-const subRepo = container.subRepo;
-const usageRepo = container.usageRepo;
-
 export const authenticate = (req: any, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -14,7 +10,7 @@ export const authenticate = (req: any, res: Response, next: NextFunction) => {
   }
 
   const token = authHeader.split(' ')[1];
-  const decoded = authService.verifyToken(token);
+  const decoded = container.authService.verifyToken(token);
   if (!decoded) {
     return res.status(401).json({ message: 'Invalid or expired token' });
   }
@@ -26,7 +22,7 @@ export const authenticate = (req: any, res: Response, next: NextFunction) => {
 export const quotaCheck = async (req: any, res: Response, next: NextFunction) => {
   if (!req.user || !req.user.schoolId) return next();
 
-  const sub = await subRepo.getBySchoolId(req.user.schoolId);
+  const sub = await container.subRepo.getBySchoolId(req.user.schoolId);
   if (!sub) return next();
 
   const limits: Record<string, number> = {
@@ -35,13 +31,13 @@ export const quotaCheck = async (req: any, res: Response, next: NextFunction) =>
     'Enterprise': 50000
   };
 
-  const currentCalls = await usageRepo.getMetric(req.user.schoolId, 'ApiCalls');
+  const currentCalls = await container.usageRepo.getMetric(req.user.schoolId, 'ApiCalls');
   if (currentCalls >= (limits[sub.PlanType] || 1000)) {
     return res.status(429).json({ message: 'API Quota exceeded for your plan' });
   }
 
   // Increment usage asynchronously
-  usageRepo.incrementMetric(req.user.schoolId, 'ApiCalls').catch(console.error);
+  container.usageRepo.incrementMetric(req.user.schoolId, 'ApiCalls').catch(console.error);
   next();
 };
 
@@ -49,7 +45,7 @@ export const checkSubscription = async (req: any, res: Response, next: NextFunct
   if (!req.user || !req.user.schoolId) return next();
 
   // SuperAdmin might bypass or we check for specific school
-  const sub = await subRepo.getBySchoolId(req.user.schoolId);
+  const sub = await container.subRepo.getBySchoolId(req.user.schoolId);
   if (!sub) {
     return res.status(403).json({ message: 'No active subscription found for this tenant' });
   }
