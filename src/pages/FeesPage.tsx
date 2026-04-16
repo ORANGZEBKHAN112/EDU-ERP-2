@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { feeApi } from '../api/feeApi';
 import { classApi } from '../api/classApi';
+import { unwrapArray } from '../utils/apiHelper';
+import { formatCurrency } from '../utils/format';
 import { 
   Settings, 
   FileText, 
@@ -10,9 +12,12 @@ import {
   Filter,
   CheckCircle2,
   Clock,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ErrorState } from '../components/shared/ErrorState';
+import { Button } from '@/components/ui/button';
 
 export const FeesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'vouchers' | 'config'>('vouchers');
@@ -21,6 +26,8 @@ export const FeesPage: React.FC = () => {
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isConfiguring, setIsConfiguring] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Form states
   const [configForm, setConfigForm] = useState({ classId: '', monthlyFee: '', transportFee: '' });
@@ -29,30 +36,35 @@ export const FeesPage: React.FC = () => {
     year: new Date().getFullYear() 
   });
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const [classesRes, configsRes, vouchersRes] = await Promise.all([
         classApi.getAll(),
         feeApi.getConfigurations(),
         feeApi.getVouchers()
       ]);
-      setClasses(classesRes);
-      setConfigs(configsRes);
-      setVouchers(vouchersRes);
+      setClasses(unwrapArray(classesRes));
+      setConfigs(unwrapArray(configsRes));
+      setVouchers(unwrapArray(vouchersRes));
     } catch (err) {
+      setError('Failed to load fee management data');
       toast.error('Failed to load fee data');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const handleConfigSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isConfiguring) return;
+    
+    setIsConfiguring(true);
     try {
       await feeApi.configure({
         classId: parseInt(configForm.classId),
@@ -61,13 +73,17 @@ export const FeesPage: React.FC = () => {
       });
       toast.success('Fee structure updated');
       fetchData();
+      setConfigForm({ classId: '', monthlyFee: '', transportFee: '' });
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to update configuration');
+    } finally {
+      setIsConfiguring(false);
     }
   };
 
   const handleGenerateVouchers = async () => {
-    if (!window.confirm(`Generate vouchers for ${genForm.month}/${genForm.year}?`)) return;
+    if (isGenerating) return;
+    if (!window.confirm(`Generate vouchers for ${genForm.month}/${genForm.year}? This action cannot be undone.`)) return;
     
     setIsGenerating(true);
     try {
@@ -143,14 +159,13 @@ export const FeesPage: React.FC = () => {
               >
                 {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
               </select>
-              <button 
+              <Button 
                 onClick={handleGenerateVouchers}
-                disabled={isGenerating}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-70 shadow-lg shadow-blue-200"
+                loading={isGenerating}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg shadow-emerald-100"
               >
-                {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
-                Generate
-              </button>
+                Authorize Execution
+              </Button>
             </div>
           </div>
 
@@ -182,14 +197,14 @@ export const FeesPage: React.FC = () => {
                         <span className="text-sm text-slate-500">Loading vouchers...</span>
                       </td>
                     </tr>
-                  ) : vouchers.length === 0 ? (
+                  ) : (vouchers || []).length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">
                         No vouchers generated yet.
                       </td>
                     </tr>
                   ) : (
-                    vouchers.map((v) => (
+                    (vouchers || []).map((v) => (
                       <tr key={v.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 text-sm font-mono text-slate-600">#{v.id}</td>
                         <td className="px-6 py-4">
@@ -197,7 +212,7 @@ export const FeesPage: React.FC = () => {
                           <p className="text-xs text-slate-500">{v.className}</p>
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600">{v.month}/{v.year}</td>
-                        <td className="px-6 py-4 text-sm font-semibold text-slate-900">${v.totalAmount}</td>
+                        <td className="px-6 py-4 text-sm font-bold text-slate-900">PKR {formatCurrency(v.totalAmount)}</td>
                         <td className="px-6 py-4">{getStatusBadge(v.status)}</td>
                       </tr>
                     ))
@@ -226,36 +241,37 @@ export const FeesPage: React.FC = () => {
                     onChange={(e) => setConfigForm({...configForm, classId: e.target.value})}
                   >
                     <option value="">Select Class</option>
-                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {(classes || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Monthly Fee ($)</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Monthly Fee (PKR)</label>
                   <input 
                     type="number" 
                     required
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20"
+                    className="w-full px-4 py-2 bg-slate-50 border-2 border-slate-100 rounded-xl outline-none focus:border-emerald-500/50 transition-all font-bold"
                     placeholder="0.00"
                     value={configForm.monthlyFee}
                     onChange={(e) => setConfigForm({...configForm, monthlyFee: e.target.value})}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Transport Fee ($)</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Transport Fee (PKR)</label>
                   <input 
                     type="number" 
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20"
+                    className="w-full px-4 py-2 bg-slate-50 border-2 border-slate-100 rounded-xl outline-none focus:border-emerald-500/50 transition-all font-bold"
                     placeholder="0.00"
                     value={configForm.transportFee}
                     onChange={(e) => setConfigForm({...configForm, transportFee: e.target.value})}
                   />
                 </div>
-                <button 
+                <Button 
                   type="submit"
-                  className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  loading={isConfiguring}
+                  className="w-full bg-slate-900 hover:bg-black font-bold h-11 rounded-xl shadow-lg shadow-slate-200"
                 >
-                  Save Configuration
-                </button>
+                  Save Structure
+                </Button>
               </form>
             </div>
           </div>
@@ -277,17 +293,17 @@ export const FeesPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {configs.length === 0 ? (
+                    {(configs || []).length === 0 ? (
                       <tr>
                         <td colSpan={4} className="px-6 py-8 text-center text-slate-400 italic">No configurations found.</td>
                       </tr>
                     ) : (
-                      configs.map((c) => (
+                      (configs || []).map((c) => (
                         <tr key={c.classId} className="hover:bg-slate-50 transition-colors">
                           <td className="px-6 py-4 text-sm font-medium text-slate-900">{c.className}</td>
-                          <td className="px-6 py-4 text-sm text-slate-600">${c.monthlyFee}</td>
-                          <td className="px-6 py-4 text-sm text-slate-600">${c.transportFee || 0}</td>
-                          <td className="px-6 py-4 text-sm font-bold text-blue-600">${(c.monthlyFee + (c.transportFee || 0))}</td>
+                          <td className="px-6 py-4 text-sm font-bold text-slate-900">PKR {formatCurrency(c.monthlyFee)}</td>
+                          <td className="px-6 py-4 text-sm font-bold text-slate-900">PKR {formatCurrency(c.transportFee || 0)}</td>
+                          <td className="px-6 py-4 text-sm font-black text-emerald-600 font-mono">PKR {formatCurrency(c.monthlyFee + (c.transportFee || 0))}</td>
                         </tr>
                       ))
                     )}

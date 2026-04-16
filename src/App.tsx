@@ -9,6 +9,7 @@ import { FeesPage } from './pages/FeesPage';
 import { PaymentsPage } from './pages/PaymentsPage';
 import { LedgerPage } from './pages/LedgerPage';
 import { SystemHealthPage } from './pages/SystemHealthPage';
+import { AuditLogPage } from './pages/AuditLogPage';
 import TenantManagementPage from './modules/admin/TenantManagementPage';
 import CampusListPage from './modules/system/CampusListPage';
 import UserManagementPage from './modules/admin/UserManagementPage';
@@ -42,6 +43,7 @@ const App: React.FC = () => {
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="ledger/:studentId" element={<LedgerPage />} />
           <Route path="system-health" element={<SystemHealthPage />} />
+          <Route path="audit-logs" element={<AuditLogPage />} />
         </Route>
 
         {/* Fallback */}

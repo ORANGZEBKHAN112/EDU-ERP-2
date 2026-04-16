@@ -6,6 +6,7 @@ import { IFeeService } from '../../interfaces/services/IFeeService';
 import { TransactionManager } from '../../repositories/transactionManager';
 import { BusinessRuleError, NotFoundError } from '../../utils/errors';
 import { eventBus, FinancialEventType, VoucherStatus } from '../events/FinancialEventBus';
+import { AuditService, AuditAction } from '../auditService';
 import { v4 as uuidv4 } from 'uuid';
 import { Payment } from '../../models';
 import { RequestContext, GenerateVouchersDto, RecordPaymentDto } from '../../dtos/fee.dto';
@@ -107,7 +108,10 @@ export class FeeService implements IFeeService {
     const { voucherId, amountPaid, paymentMethod, transactionRef } = dto;
 
     const existingPayment = await this.feeRepo.getPaymentByRef(transactionRef);
-    if (existingPayment) return existingPayment;
+    if (existingPayment) {
+      console.log(`[PAYMENT] Idempotency triggered: Transaction ${transactionRef} already exists. Returning success.`);
+      return existingPayment;
+    }
 
     const txManager = await TransactionManager.startTransaction();
     try {
@@ -156,7 +160,13 @@ export class FeeService implements IFeeService {
       // 4. Update Voucher Status
       await this.feeRepo.updateVoucherStatus(voucherId, newStatus, txManager.transaction);
 
-      // 5. Financial Trace (Non-blocking)
+      // 5. Financial Audit & Trace
+      await AuditService.log(ctx.userId, AuditAction.PAYMENT, null, { voucherId, amountPaid, transactionRef }, voucher.campusId, txManager.transaction, {
+        correlationId,
+        transactionId,
+        eventType: FinancialEventType.PAYMENT_RECEIVED
+      });
+
       this.traceService.trace('PAYMENT', voucher.studentId, amountPaid, correlationId, ctx);
 
       // 6. Emit Side-Effect Event

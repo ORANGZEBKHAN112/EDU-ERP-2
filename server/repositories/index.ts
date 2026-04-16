@@ -840,7 +840,7 @@ export class EventRepository {
           SELECT TOP (@limit) * FROM FinancialEvents 
           WHERE (Status = 'Pending' OR (Status = 'Failed' AND RetryCount < 3 AND IsDeadLetter = 0))
           AND (LockedBy IS NULL OR LockedAt < DATEADD(minute, -10, GETDATE()))
-          ORDER BY SequenceNumber ASC
+          ORDER BY EventId ASC
         )
         UPDATE CTE
         SET Status = 'Processing', 
@@ -1050,17 +1050,33 @@ export class SummaryRepository {
 
   async getSuperAdminStats() {
     const pool = await poolPromise;
-    const result = await pool.request().query(`
-      SELECT 
-        ISNULL(SUM(TotalRevenue), 0) as totalRevenue,
-        ISNULL(SUM(TotalPending), 0) as totalPendingDues,
-        ISNULL(SUM(TotalStudents), 0) as totalStudents,
-        CASE WHEN SUM(TotalRevenue + TotalPending) > 0 
-             THEN (SUM(TotalRevenue) * 100.0 / SUM(TotalRevenue + TotalPending)) 
-             ELSE 0 END as collectionRate
-      FROM CampusMonthlySummary
-    `);
-    return result.recordset[0];
+    // Current month for financial context
+    const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+    
+    const result = await pool.request()
+      .input('month', sql.NVarChar, currentMonth)
+      .query(`
+        SELECT 
+          (SELECT ISNULL(SUM(TotalRevenue), 0) FROM CampusMonthlySummary WHERE Month = @month) as totalRevenue,
+          (SELECT ISNULL(SUM(TotalPending), 0) FROM CampusMonthlySummary WHERE Month = @month) as totalPendingDues,
+          (SELECT COUNT(*) FROM Students) as totalStudents,
+          (SELECT COUNT(*) FROM Schools) as totalSchools,
+          (SELECT COUNT(*) FROM Classes) as totalClasses
+      `);
+      
+    const r = result.recordset[0];
+    const rev = Number(r.totalRevenue || 0);
+    const pend = Number(r.totalPendingDues || 0);
+    const total = rev + pend;
+    
+    return {
+      totalRevenue: rev,
+      totalPendingDues: pend,
+      totalStudents: r.totalStudents,
+      totalSchools: r.totalSchools,
+      totalClasses: r.totalClasses,
+      collectionRate: total > 0 ? (rev * 100) / total : 0
+    };
   }
 
   async getMonthlyRevenueTrend() {
@@ -1076,16 +1092,19 @@ export class SummaryRepository {
 
   async getCampusStats(campusId: number) {
     const pool = await poolPromise;
+    const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+    
     const result = await pool.request()
       .input('campusId', sql.Int, campusId)
+      .input('month', sql.NVarChar, currentMonth)
       .query(`
         SELECT 
-          ISNULL(SUM(TotalRevenue), 0) as campusRevenue,
-          ISNULL(SUM(TotalPending), 0) as pendingDues,
-          ISNULL(SUM(PaidStudents), 0) as paidStudentsCount,
-          ISNULL(SUM(UnpaidStudents), 0) as unpaidStudentsCount
-        FROM CampusMonthlySummary
-        WHERE CampusId = @campusId
+          (SELECT ISNULL(SUM(TotalRevenue), 0) FROM CampusMonthlySummary WHERE CampusId = @campusId AND Month = @month) as campusRevenue,
+          (SELECT ISNULL(SUM(TotalPending), 0) FROM CampusMonthlySummary WHERE CampusId = @campusId AND Month = @month) as pendingDues,
+          (SELECT ISNULL(SUM(PaidStudents), 0) FROM CampusMonthlySummary WHERE CampusId = @campusId AND Month = @month) as paidStudentsCount,
+          (SELECT ISNULL(SUM(UnpaidStudents), 0) FROM CampusMonthlySummary WHERE CampusId = @campusId AND Month = @month) as unpaidStudentsCount,
+          (SELECT COUNT(*) FROM Students WHERE CampusId = @campusId) as totalStudentsCount,
+          (SELECT COUNT(*) FROM Classes WHERE CampusId = @campusId) as totalClasses
       `);
     return result.recordset[0];
   }

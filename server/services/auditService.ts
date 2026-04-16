@@ -8,7 +8,9 @@ export enum AuditAction {
   ADJUSTMENT = 'ADJUSTMENT',
   STUDENT_CREATE = 'STUDENT_CREATE',
   JOB_START = 'JOB_START',
-  JOB_END = 'JOB_END'
+  JOB_END = 'JOB_END',
+  LOGIN = 'LOGIN',
+  LOGIN_FAILED = 'LOGIN_FAILED'
 }
 
 export class AuditService {

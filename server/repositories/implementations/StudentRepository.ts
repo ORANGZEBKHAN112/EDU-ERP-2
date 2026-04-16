@@ -5,6 +5,10 @@ import { IStudentRepository } from '../../interfaces/repositories/IStudentReposi
 export class StudentRepository implements IStudentRepository {
   async getAll(campusIds?: number[], schoolId?: number, filterCampusId?: number, search?: string): Promise<Student[]> {
     const pool = await poolPromise;
+    
+    // Strict isolation: block access if no campusIds/schoolId authorized
+    if ((!campusIds || campusIds.length === 0) && !schoolId) return [];
+
     let query = 'SELECT * FROM Students WHERE 1=1';
     const request = pool.request();
     
@@ -43,6 +47,10 @@ export class StudentRepository implements IStudentRepository {
 
   async getById(id: number, campusIds?: number[], schoolId?: number): Promise<Student | undefined> {
     const pool = await poolPromise;
+
+    // Strict isolation: block access if no identity contexts provided
+    if ((!campusIds || campusIds.length === 0) && !schoolId) return undefined;
+
     let query = 'SELECT * FROM Students WHERE StudentId = @id';
     const request = pool.request().input('id', sql.Int, id);
     

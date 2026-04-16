@@ -1,4 +1,4 @@
-import api from './axios';
+import api from '../services/apiClient';
 import { useAuthContextStore } from '../store/authContextStore';
 import { injectTenantContext } from '../utils/tenantHelper';
 

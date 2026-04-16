@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ledgerApi } from '../api/ledgerApi';
 import { studentApi } from '../api/studentApi';
+import { unwrap, unwrapArray } from '../utils/apiHelper';
+import { formatCurrency } from '../utils/format';
 import { 
   ArrowLeft, 
   Download, 
@@ -10,9 +12,12 @@ import {
   AlertCircle,
   TrendingUp,
   TrendingDown,
-  Wallet
+  Wallet,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ErrorState } from '../components/shared/ErrorState';
+import { Button } from '@/components/ui/button';
 
 export const LedgerPage: React.FC = () => {
   const { studentId } = useParams<{ studentId: string }>();
@@ -22,46 +27,50 @@ export const LedgerPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!studentId) return;
-      setIsLoading(true);
-      setError(null);
-      try {
-        const [ledgerData, studentData] = await Promise.all([
-          ledgerApi.getStudentLedger(parseInt(studentId)),
-          studentApi.getById(parseInt(studentId))
-        ]);
-        setLedger(ledgerData);
-        setStudent(studentData);
-      } catch (err) {
-        setError('Failed to load ledger data');
-        toast.error('Failed to load ledger');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
+  const fetchData = useCallback(async () => {
+    if (!studentId) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [ledgerData, studentData] = await Promise.all([
+        ledgerApi.getStudentLedger(parseInt(studentId)),
+        studentApi.getById(parseInt(studentId))
+      ]);
+      setLedger(unwrapArray(ledgerData));
+      setStudent(unwrap(studentData));
+    } catch (err) {
+      setError('Failed to load comprehensive ledger data');
+      toast.error('Failed to load ledger');
+    } finally {
+      setIsLoading(false);
+    }
   }, [studentId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+        <Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
+        <p className="text-slate-500 font-medium animate-pulse text-sm">Synchronizing ledger records...</p>
       </div>
     );
   }
 
   if (error || !student) {
     return (
-      <div className="p-6 bg-red-50 border border-red-100 rounded-xl text-red-600 flex items-center gap-3">
-        <AlertCircle size={20} />
-        <p>{error || 'Student not found'}</p>
+      <div className="p-8">
+        <ErrorState 
+          message={error || 'Student not found in the current campus directory'} 
+          onRetry={fetchData} 
+        />
       </div>
     );
   }
 
-  const currentBalance = ledger.length > 0 ? ledger[ledger.length - 1].runningBalance : 0;
+  const currentBalance = (ledger || []).length > 0 ? (ledger || [])[(ledger || []).length - 1].runningBalance : 0;
 
   return (
     <div className="space-y-6">
@@ -102,7 +111,7 @@ export const LedgerPage: React.FC = () => {
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Current Balance</p>
           <div className="flex items-end gap-2">
             <p className={`text-3xl font-black ${currentBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-              ${Math.abs(currentBalance).toLocaleString()}
+              PKR {formatCurrency(Math.max(0, currentBalance))}
             </p>
             <p className="text-sm font-bold text-slate-400 mb-1 uppercase">
               {currentBalance > 0 ? 'Payable' : 'Credit'}
@@ -116,7 +125,7 @@ export const LedgerPage: React.FC = () => {
           </div>
           <div>
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Transactions</p>
-            <p className="text-xl font-bold text-slate-900">{ledger.length}</p>
+            <p className="text-xl font-bold text-slate-900">{(ledger || []).length}</p>
           </div>
         </div>
       </div>
@@ -135,14 +144,14 @@ export const LedgerPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {ledger.length === 0 ? (
+              {(ledger || []).length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic">
                     No transactions found for this student.
                   </td>
                 </tr>
               ) : (
-                ledger.map((entry, i) => (
+                (ledger || []).map((entry, i) => (
                   <tr key={i} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {new Date(entry.createdAt).toLocaleDateString()}
@@ -158,13 +167,13 @@ export const LedgerPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">{entry.description}</td>
                     <td className="px-6 py-4 text-sm text-right font-medium text-red-600">
-                      {entry.debit > 0 ? `+${entry.debit.toLocaleString()}` : '-'}
+                      {entry.debit > 0 ? `+${formatCurrency(entry.debit)}` : '-'}
                     </td>
                     <td className="px-6 py-4 text-sm text-right font-medium text-green-600">
-                      {entry.credit > 0 ? `-${entry.credit.toLocaleString()}` : '-'}
+                      {entry.credit > 0 ? `-${formatCurrency(entry.credit)}` : '-'}
                     </td>
-                    <td className="px-6 py-4 text-sm text-right font-bold text-slate-900">
-                      ${entry.runningBalance.toLocaleString()}
+                    <td className="px-6 py-4 text-sm text-right font-black text-slate-900 font-mono">
+                      PKR {formatCurrency(Math.max(0, entry.runningBalance))}
                     </td>
                   </tr>
                 ))

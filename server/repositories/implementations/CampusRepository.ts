@@ -3,9 +3,13 @@ import { Campus } from '../../models';
 import { ICampusRepository } from '../../interfaces/repositories/ICampusRepository';
 
 export class CampusRepository implements ICampusRepository {
-  async getAll(): Promise<Campus[]> {
+  async getAll(schoolId?: number): Promise<Campus[]> {
     const pool = await poolPromise;
-    const result = await pool.request().query('SELECT * FROM Campuses');
+    if (!schoolId) return []; // Block access if no tenant context
+    
+    const result = await pool.request()
+      .input('schoolId', sql.Int, schoolId)
+      .query('SELECT * FROM Campuses WHERE SchoolId = @schoolId');
     return result.recordset.map(r => ({
       id: r.CampusId,
       schoolId: r.SchoolId,
@@ -18,11 +22,20 @@ export class CampusRepository implements ICampusRepository {
     }));
   }
 
-  async getById(id: number): Promise<Campus | undefined> {
+  async getById(id: number, schoolId?: number): Promise<Campus | undefined> {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('id', sql.Int, id)
-      .query('SELECT * FROM Campuses WHERE CampusId = @id');
+    
+    let query = 'SELECT * FROM Campuses WHERE CampusId = @id';
+    const request = pool.request().input('id', sql.Int, id);
+    
+    if (schoolId) {
+      query += ' AND SchoolId = @schoolId';
+      request.input('schoolId', sql.Int, schoolId);
+    } else {
+      return undefined; // Strictly require schoolId context for queries
+    }
+
+    const result = await request.query(query);
     const r = result.recordset[0];
     if (!r) return undefined;
     return {

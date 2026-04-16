@@ -18,8 +18,17 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && !canAccess(userContext, allowedRoles)) {
-    return <Navigate to="/dashboard" replace />;
+  // Normalize user roles and handle empty cases
+  const userRoles = (userContext?.roles || []).map(r => String(r).toLowerCase());
+  
+  if (allowedRoles && allowedRoles.length > 0) {
+    const normalizedAllowed = allowedRoles.map(r => String(r).toLowerCase());
+    const hasAccess = userRoles.some(role => normalizedAllowed.includes(role));
+
+    if (!hasAccess && userRoles.length > 0) {
+      console.warn('Unauthorized role access attempt:', { userRoles, normalizedAllowed });
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return <>{children}</>;

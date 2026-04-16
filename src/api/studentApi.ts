@@ -1,4 +1,4 @@
-import api from './axios';
+import api from '../services/apiClient';
 import { useAuthContextStore } from '../store/authContextStore';
 import { injectTenantContext } from '../utils/tenantHelper';
 
@@ -10,7 +10,9 @@ export const studentApi = {
     return response.data;
   },
   getById: async (id: number) => {
-    const response = await api.get(`/students/${id}`);
+    const context = useAuthContextStore.getState();
+    const params = injectTenantContext({}, context);
+    const response = await api.get(`/students/${id}`, { params });
     return response.data;
   },
   create: async (data: any) => {
@@ -26,7 +28,9 @@ export const studentApi = {
     return response.data;
   },
   delete: async (id: number) => {
-    const response = await api.delete(`/students/${id}`);
+    const context = useAuthContextStore.getState();
+    const params = injectTenantContext({}, context);
+    const response = await api.delete(`/students/${id}`, { params });
     return response.data;
   },
 };

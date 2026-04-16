@@ -60,7 +60,7 @@ router.post('/campuses', authenticate, authorize(['SuperAdmin']), campusCtrl.cre
 router.put('/campuses/:id', authenticate, authorize(['SuperAdmin']), campusCtrl.updateCampus);
 
 // Classes
-router.get('/classes/:campusId', authenticate, classCtrl.getClasses);
+router.get('/classes/:campusId', authenticate, checkCampusAccess, classCtrl.getClasses);
 router.post('/classes', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), classCtrl.createClass);
 
 // Students
@@ -75,7 +75,7 @@ router.post('/fees/generate-vouchers', authenticate, authorize(['SuperAdmin', 'F
 router.get('/fees/ledger/:studentId', authenticate, checkCampusAccess, feeCtrl.getLedger);
 
 // Payments
-router.post('/payments/initiate', authenticate, paymentCtrl.initiate);
+router.post('/payments/initiate', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), checkCampusAccess, paymentCtrl.initiate);
 
 // Dashboard
 router.get('/dashboard/superadmin', authenticate, authorize(['SuperAdmin']), dashboardCtrl.getSuperAdminStats);

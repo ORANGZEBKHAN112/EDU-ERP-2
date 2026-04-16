@@ -1,4 +1,4 @@
-import api from './axios';
+import api from '../services/apiClient';
 import { useAuthContextStore } from '../store/authContextStore';
 import { injectTenantContext } from '../utils/tenantHelper';
 
@@ -7,7 +7,8 @@ export const paymentApi = {
     voucherId: number; 
     amount: number; 
     paymentMethod: string; 
-    notes?: string 
+    notes?: string;
+    referenceId?: string;
   }) => {
     const context = useAuthContextStore.getState();
     const enrichedData = injectTenantContext(data, context);

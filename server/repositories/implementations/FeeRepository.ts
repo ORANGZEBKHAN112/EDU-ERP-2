@@ -24,14 +24,16 @@ export class FeeRepository implements IFeeRepository {
 
   async getVoucher(studentId: number, month: string, campusIds?: number[]): Promise<FeeVoucher | undefined> {
     const pool = await poolPromise;
+    
+    // Strict isolation: if no campusIds provided (and not superadmin in context logic), block access
+    if (!campusIds || campusIds.length === 0) return undefined;
+
     let query = 'SELECT * FROM FeeVouchers WHERE StudentId = @studentId AND Month = @month';
     const request = pool.request()
       .input('studentId', sql.Int, studentId)
       .input('month', sql.NVarChar, month);
     
-    if (campusIds && campusIds.length > 0) {
-      query += ' AND CampusId IN (' + campusIds.join(',') + ')';
-    }
+    query += ' AND CampusId IN (' + campusIds.join(',') + ')';
     
     const result = await request.query(query);
     const r = result.recordset[0];
@@ -50,12 +52,14 @@ export class FeeRepository implements IFeeRepository {
 
   async getVoucherById(id: number, campusIds?: number[]): Promise<FeeVoucher | undefined> {
     const pool = await poolPromise;
+    
+    // Strict isolation: block access if no campusIds authorized
+    if (!campusIds || campusIds.length === 0) return undefined;
+
     let query = 'SELECT * FROM FeeVouchers WHERE VoucherId = @id';
     const request = pool.request().input('id', sql.Int, id);
     
-    if (campusIds && campusIds.length > 0) {
-      query += ' AND CampusId IN (' + campusIds.join(',') + ')';
-    }
+    query += ' AND CampusId IN (' + campusIds.join(',') + ')';
     
     const result = await request.query(query);
     const r = result.recordset[0];
@@ -197,10 +201,13 @@ export class FeeRepository implements IFeeRepository {
 
   async getAllPayments(campusIds?: number[]): Promise<Payment[]> {
     const pool = await poolPromise;
+    
+    // Strict isolation: block access if no campusIds authorized
+    if (!campusIds || campusIds.length === 0) return [];
+
     let query = 'SELECT p.* FROM Payments p INNER JOIN FeeVouchers v ON p.VoucherId = v.VoucherId';
-    if (campusIds && campusIds.length > 0) {
-      query += ' WHERE v.CampusId IN (' + campusIds.join(',') + ')';
-    }
+    query += ' WHERE v.CampusId IN (' + campusIds.join(',') + ')';
+    
     const result = await pool.request().query(query);
     return result.recordset.map(r => ({
       id: r.PaymentId,

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Plus, Building2, Shield, CreditCard, Activity } from 'lucide-react';
+import { Plus, Building2, Shield, CreditCard, Activity, Search, AlertCircle, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import apiClient from '@/services/apiClient';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,12 +10,40 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useDebounce } from 'use-debounce';
+
+const TenantRow = React.memo(({ tenant }: { tenant: any }) => (
+  <TableRow>
+    <TableCell className="font-medium">{tenant.name}</TableCell>
+    <TableCell>{tenant.country}</TableCell>
+    <TableCell>
+      <Badge variant={tenant.isActive ? 'default' : 'secondary'}>
+        {tenant.isActive ? 'Active' : 'Inactive'}
+      </Badge>
+    </TableCell>
+    <TableCell>{new Date(tenant.createdAt).toLocaleDateString()}</TableCell>
+    <TableCell className="text-right">
+      <Button variant="ghost" size="sm">
+        <CreditCard className="h-4 w-4 mr-2" /> Billing
+      </Button>
+    </TableCell>
+  </TableRow>
+));
+
+TenantRow.displayName = 'TenantRow';
 
 export default function TenantManagementPage() {
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch] = useDebounce(searchTerm, 300);
+
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const [formData, setFormData] = useState({
     schoolName: '',
@@ -26,21 +54,23 @@ export default function TenantManagementPage() {
     planType: 'Basic'
   });
 
-  const fetchTenants = async () => {
+  const fetchTenants = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await apiClient.get('/tenants');
       setTenants(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
+      setError('Failed to load tenants');
       toast.error('Failed to load tenants');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchTenants();
-  }, []);
+  }, [fetchTenants]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +87,21 @@ export default function TenantManagementPage() {
       setSubmitting(false);
     }
   };
+
+  // Client-side filtering and pagination
+  const filteredTenants = useMemo(() => {
+    if (!debouncedSearch || debouncedSearch.length < 2) return tenants;
+    return tenants.filter(t => 
+      t.name.toLowerCase().includes(debouncedSearch.toLowerCase())
+    );
+  }, [tenants, debouncedSearch]);
+
+  const paginatedTenants = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredTenants.slice(start, start + pageSize);
+  }, [filteredTenants, page, pageSize]);
+
+  const totalPages = Math.ceil(filteredTenants.length / pageSize);
 
   return (
     <div className="p-6 space-y-6">
@@ -100,7 +145,21 @@ export default function TenantManagementPage() {
         </Card>
       </div>
 
-      <div className="border rounded-lg bg-card overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-4">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input 
+              placeholder="Search schools..." 
+              className="pl-9 bg-white h-9" 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          {searchTerm.length > 0 && searchTerm.length < 2 && (
+            <span className="text-xs text-amber-600 font-medium">Type at least 2 characters to search</span>
+          )}
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -120,23 +179,26 @@ export default function TenantManagementPage() {
                   ))}
                 </TableRow>
               ))
-            ) : tenants.length > 0 ? (
-              tenants.map((tenant) => (
-                <TableRow key={tenant.id}>
-                  <TableCell className="font-medium">{tenant.name}</TableCell>
-                  <TableCell>{tenant.country}</TableCell>
-                  <TableCell>
-                    <Badge variant={tenant.isActive ? 'default' : 'secondary'}>
-                      {tenant.isActive ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{new Date(tenant.createdAt).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      <CreditCard className="h-4 w-4 mr-2" /> Billing
-                    </Button>
-                  </TableCell>
-                </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-64 text-center">
+                  <div className="flex flex-col items-center justify-center text-slate-500 gap-4">
+                    <AlertCircle className="text-red-500" size={32} />
+                    <div className="text-center">
+                      <p className="font-medium text-slate-900">{error}</p>
+                      <button 
+                        onClick={fetchTenants}
+                        className="mt-2 text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-2 mx-auto"
+                      >
+                        <RefreshCw size={16} /> Retry
+                      </button>
+                    </div>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : paginatedTenants.length > 0 ? (
+              paginatedTenants.map((tenant) => (
+                <TenantRow key={tenant.id} tenant={tenant} />
               ))
             ) : (
               <TableRow>
@@ -147,6 +209,47 @@ export default function TenantManagementPage() {
             )}
           </TableBody>
         </Table>
+
+        {filteredTenants.length > 0 && !loading && !error && (
+          <div className="p-4 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between">
+            <p className="text-sm text-slate-500 font-medium">
+              Showing <span className="text-slate-900 font-bold">{(page - 1) * pageSize + 1}</span> to <span className="text-slate-900 font-bold">{Math.min(page * pageSize, filteredTenants.length)}</span> of <span className="text-slate-900 font-bold">{filteredTenants.length}</span> schools
+            </p>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                disabled={page === 1}
+                onClick={() => setPage(p => p - 1)}
+              >
+                <ChevronLeft size={16} className="mr-1" /> Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => (
+                  <button
+                    key={i + 1}
+                    onClick={() => setPage(i + 1)}
+                    className={`w-8 h-8 rounded-md text-xs font-bold transition-all ${
+                      page === i + 1 
+                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-200' 
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                disabled={page === totalPages}
+                onClick={() => setPage(p => p + 1)}
+              >
+                Next <ChevronRight size={16} className="ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
