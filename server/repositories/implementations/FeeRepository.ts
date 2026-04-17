@@ -136,18 +136,11 @@ export class FeeRepository implements IFeeRepository {
 
   async getVoucher(studentId: number, month: string, campusIds?: number[]): Promise<FeeVoucher | undefined> {
     const pool = await poolPromise;
-    
-    // Strict isolation: if no campusIds provided (and not superadmin in context logic), block access
-    if (!campusIds || campusIds.length === 0) return undefined;
-
-    let query = 'SELECT * FROM FeeVouchers WHERE StudentId = @studentId AND Month = @month';
     const request = pool.request()
       .input('studentId', sql.Int, studentId)
       .input('month', sql.NVarChar, month);
-    
-    query += ' AND CampusId IN (' + campusIds.join(',') + ')';
-    
-    const result = await request.query(query);
+
+    const result = await request.query('SELECT * FROM FeeVouchers WHERE StudentId = @studentId AND Month = @month');
     const r = result.recordset[0];
     if (!r) return undefined;
     return {

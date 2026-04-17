@@ -61,7 +61,7 @@ export class FeeService implements IFeeService {
       const generated = [];
 
       for (const student of students) {
-        const existing = await this.feeRepo.getVoucher(student.id, month);
+        const existing = await this.feeRepo.getVoucher(student.id, month, [student.campusId]);
         if (existing) continue;
 
         const structure = await this.feeRepo.getStructure(student.campusId, student.classId);

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:3000/api';
+const BASE_URL = 'http://localhost:3001/api';
 let authToken = '';
 
 const apiCall = async (method, endpoint, data = null) => {
@@ -42,7 +42,7 @@ async function testVoucherGeneration() {
       });
       console.log('Success:', response.data);
     } catch (error) {
-      console.log('Voucher generation failed (expected due to timeout):', error.response?.data?.message || error.message);
+      console.log('Voucher generation failed (expected due to timeout):', error.response?.data || error.message);
 
       // Wait a bit and check if vouchers were actually created
       console.log('Waiting 5 seconds and checking if vouchers were created...');
