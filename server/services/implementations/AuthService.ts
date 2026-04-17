@@ -43,7 +43,9 @@ export class AuthService implements IAuthService {
         id: user.id, 
         fullName: user.fullName, 
         email: user.email, 
-        roles: roles.map(r => r.name) 
+        roles: roles.map(r => r.name),
+        schoolId: user.schoolId,
+        campusIds: campuses.map(c => c.id)
       } 
     };
   }

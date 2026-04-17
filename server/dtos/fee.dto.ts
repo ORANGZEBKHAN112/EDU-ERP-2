@@ -16,11 +16,11 @@ export interface RecordPaymentDto {
   transactionRef: string;
 }
 
-export interface StudentBalanceDto {
-  studentId: number;
-  fullName: string;
-  admissionNo: string;
-  currentBalance: number;
-  lastPaymentDate?: Date;
-  status: 'Paid' | 'Partial' | 'Unpaid';
+export interface CreateFeeStructureDto {
+  campusId: number;
+  classId: number;
+  monthlyFee: number;
+  transportFee: number;
+  examFee: number;
+  effectiveFromMonth: string;
 }

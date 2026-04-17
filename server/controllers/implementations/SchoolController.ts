@@ -10,7 +10,15 @@ export class SchoolController {
   };
 
   createSchool = async (req: Request, res: Response) => {
-    const school = await this.schoolService.createSchool(req.body);
-    res.status(201).json(school);
+    try {
+      const school = await this.schoolService.createSchool({
+        name: req.body.schoolName,
+        country: req.body.country
+      });
+      res.status(201).json(school);
+    } catch (error) {
+      console.error('Error creating school:', error);
+      res.status(500).json({ message: 'Internal server error', error: error.message });
+    }
   };
 }

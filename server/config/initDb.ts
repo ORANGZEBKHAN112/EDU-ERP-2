@@ -9,7 +9,7 @@ export async function initializeDatabase() {
   
   const migrations = [
     'CreateTables.sql',
-    'SeedData.sql',
+    // 'SeedData.sql', // Temporarily disabled for QA testing
     'SaaSLayer.sql',
     'BankingGradeUpgrade.sql',
     'AddFinancialTraceTable.sql',

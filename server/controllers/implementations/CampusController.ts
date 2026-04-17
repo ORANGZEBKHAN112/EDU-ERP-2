@@ -30,7 +30,13 @@ export class CampusController {
 
   createCampus = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const campus = await this.schoolService.createCampus(req.body);
+      const campus = await this.schoolService.createCampus({
+        schoolId: req.body.schoolId,
+        name: req.body.campusName,
+        state: req.body.state,
+        city: req.body.city,
+        address: req.body.address
+      });
       res.json(campus);
     } catch (err) {
       next(err);

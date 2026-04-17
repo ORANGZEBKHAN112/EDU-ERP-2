@@ -28,6 +28,15 @@ export const generateVouchersSchema = z.object({
   month: z.string().regex(/^\d{4}-\d{2}$/, "Format must be YYYY-MM"),
 });
 
+export const createFeeStructureSchema = z.object({
+  campusId: z.number(),
+  classId: z.number(),
+  monthlyFee: z.number().min(0),
+  transportFee: z.number().min(0),
+  examFee: z.number().min(0),
+  effectiveFromMonth: z.string().regex(/^\d{4}-\d{2}$/, "Format must be YYYY-MM"),
+});
+
 export const initiatePaymentSchema = z.object({
   voucherId: z.number(),
   amountPaid: z.number().positive(),

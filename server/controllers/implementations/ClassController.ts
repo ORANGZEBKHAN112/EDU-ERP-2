@@ -16,8 +16,8 @@ export class ClassController {
 
   createClass = async (req: any, res: Response, next: NextFunction) => {
     try {
-      const { campusId, name } = req.body;
-      const newClass = await this.classRepo.create({ campusId, name });
+      const { campusId, className } = req.body;
+      const newClass = await this.classRepo.create({ campusId, name: className });
       res.status(201).json(newClass);
     } catch (err) {
       next(err);

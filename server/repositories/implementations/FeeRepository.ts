@@ -22,6 +22,118 @@ export class FeeRepository implements IFeeRepository {
     };
   }
 
+  async createVouchersBulk(vouchers: any[], transaction?: sql.Transaction): Promise<any[]> {
+    if (vouchers.length === 0) return [];
+
+    const pool = transaction ? transaction : await poolPromise;
+    const createdVouchers = [];
+
+    // Insert vouchers one by one (simpler approach)
+    for (const voucher of vouchers) {
+      const result = await pool.request()
+        .input('studentId', sql.Int, voucher.studentId)
+        .input('campusId', sql.Int, voucher.campusId)
+        .input('month', sql.NVarChar, voucher.month)
+        .input('totalAmount', sql.Decimal(18, 2), voucher.totalAmount)
+        .input('dueDate', sql.DateTime, voucher.dueDate)
+        .input('status', sql.NVarChar, voucher.status)
+        .input('correlationId', sql.NVarChar, voucher.correlationId)
+        .query(`
+          INSERT INTO FeeVouchers (StudentId, CampusId, Month, TotalAmount, DueDate, Status, CorrelationId)
+          OUTPUT INSERTED.VoucherId, INSERTED.StudentId, INSERTED.CampusId, INSERTED.Month, INSERTED.TotalAmount, INSERTED.DueDate, INSERTED.Status, INSERTED.GeneratedAt, INSERTED.CorrelationId
+          VALUES (@studentId, @campusId, @month, @totalAmount, @dueDate, @status, @correlationId)
+        `);
+
+      createdVouchers.push({
+        id: result.recordset[0].VoucherId,
+        studentId: result.recordset[0].StudentId,
+        campusId: result.recordset[0].CampusId,
+        month: result.recordset[0].Month,
+        totalAmount: result.recordset[0].TotalAmount,
+        dueDate: result.recordset[0].DueDate,
+        status: result.recordset[0].Status as 'Paid' | 'Unpaid',
+        generatedAt: result.recordset[0].GeneratedAt,
+        correlationId: result.recordset[0].CorrelationId
+      });
+    }
+
+    return createdVouchers;
+  }
+
+  async getVouchersBulk(studentIds: number[], month: string): Promise<any[]> {
+    if (studentIds.length === 0) return [];
+
+    const pool = await poolPromise;
+    const idsList = studentIds.join(',');
+    
+    const result = await pool.request()
+      .input('month', sql.NVarChar, month)
+      .query(`
+        SELECT * FROM FeeVouchers 
+        WHERE StudentId IN (${idsList}) AND Month = @month
+      `);
+
+    return result.recordset.map(r => ({
+      id: r.VoucherId,
+      studentId: r.StudentId,
+      campusId: r.CampusId,
+      month: r.Month,
+      totalAmount: r.TotalAmount,
+      dueDate: r.DueDate,
+      status: r.Status as 'Paid' | 'Unpaid',
+      generatedAt: r.GeneratedAt,
+      correlationId: r.CorrelationId
+    }));
+  }
+
+  async getStructuresBulk(classIds: number[], campusId: number): Promise<any[]> {
+    if (classIds.length === 0) return [];
+
+    const pool = await poolPromise;
+    const idsList = classIds.join(',');
+    
+    const result = await pool.request()
+      .input('campusId', sql.Int, campusId)
+      .query(`
+        SELECT * FROM FeeStructure 
+        WHERE ClassId IN (${idsList}) AND CampusId = @campusId
+      `);
+
+    return result.recordset.map(r => ({
+      id: r.FeeStructureId,
+      campusId: r.CampusId,
+      classId: r.ClassId,
+      monthlyFee: r.MonthlyFee,
+      transportFee: r.TransportFee,
+      examFee: r.ExamFee,
+      effectiveFromMonth: r.EffectiveFromMonth
+    }));
+  }
+
+  async getAdjustmentsBulk(studentIds: number[], month: string): Promise<any[]> {
+    if (studentIds.length === 0) return [];
+
+    const pool = await poolPromise;
+    const idsList = studentIds.join(',');
+    
+    const result = await pool.request()
+      .input('month', sql.NVarChar, month)
+      .query(`
+        SELECT * FROM FeeAdjustments 
+        WHERE StudentId IN (${idsList}) AND Month = @month
+      `);
+
+    return result.recordset.map(r => ({
+      id: r.AdjustmentId,
+      studentId: r.StudentId,
+      month: r.Month,
+      type: r.AdjustmentType,
+      amount: r.Amount,
+      reason: r.Reason,
+      appliedAt: r.AppliedAt
+    }));
+  }
+
   async getVoucher(studentId: number, month: string, campusIds?: number[]): Promise<FeeVoucher | undefined> {
     const pool = await poolPromise;
     

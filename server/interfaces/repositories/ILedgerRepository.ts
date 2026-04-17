@@ -7,4 +7,6 @@ export interface ILedgerRepository {
   create(ledger: any, transaction?: sql.Transaction): Promise<StudentFeeLedger>;
   getOpeningBalance(studentId: number, month: string): Promise<number>;
   getByCorrelationId(correlationId: string): Promise<StudentFeeLedger | null>;
+  createBulk(ledgers: any[], transaction?: sql.Transaction): Promise<StudentFeeLedger[]>;
+  getOpeningBalancesBulk(studentIds: number[], month: string): Promise<any[]>;
 }

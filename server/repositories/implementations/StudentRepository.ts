@@ -6,28 +6,28 @@ export class StudentRepository implements IStudentRepository {
   async getAll(campusIds?: number[], schoolId?: number, filterCampusId?: number, search?: string): Promise<Student[]> {
     const pool = await poolPromise;
     
-    // Strict isolation: block access if no campusIds/schoolId authorized
-    if ((!campusIds || campusIds.length === 0) && !schoolId) return [];
+    // Allow SuperAdmin to see all students (no filtering), others must have campusIds or schoolId
+    const isSuperAdminAccess = (!campusIds || campusIds.length === 0) && !schoolId;
 
-    let query = 'SELECT * FROM Students WHERE 1=1';
+    let query = 'SELECT s.*, c.SchoolId FROM Students s INNER JOIN Campuses c ON s.CampusId = c.CampusId WHERE 1=1';
     const request = pool.request();
     
-    if (schoolId) {
-      query += ' AND SchoolId = @schoolId';
+    if (schoolId && !isSuperAdminAccess) {
+      query += ' AND c.SchoolId = @schoolId';
       request.input('schoolId', sql.Int, schoolId);
     }
 
-    if (campusIds && campusIds.length > 0) {
-      query += ' AND CampusId IN (' + campusIds.join(',') + ')';
+    if (campusIds && campusIds.length > 0 && !isSuperAdminAccess) {
+      query += ' AND s.CampusId IN (' + campusIds.join(',') + ')';
     }
 
     if (filterCampusId) {
-      query += ' AND CampusId = @filterCampusId';
+      query += ' AND s.CampusId = @filterCampusId';
       request.input('filterCampusId', sql.Int, filterCampusId);
     }
 
     if (search) {
-      query += ' AND (FullName LIKE @search OR AdmissionNo LIKE @search)';
+      query += ' AND (s.FullName LIKE @search OR s.AdmissionNo LIKE @search)';
       request.input('search', sql.NVarChar, `%${search}%`);
     }
     
@@ -48,19 +48,22 @@ export class StudentRepository implements IStudentRepository {
   async getById(id: number, campusIds?: number[], schoolId?: number): Promise<Student | undefined> {
     const pool = await poolPromise;
 
-    // Strict isolation: block access if no identity contexts provided
-    if ((!campusIds || campusIds.length === 0) && !schoolId) return undefined;
+    // Allow SuperAdmin to see all students, others must have campusIds or schoolId
+    const isSuperAdminAccess = (!campusIds || campusIds.length === 0) && !schoolId;
+    if (isSuperAdminAccess) {
+      // For SuperAdmin, just check if student exists
+    }
 
-    let query = 'SELECT * FROM Students WHERE StudentId = @id';
+    let query = 'SELECT s.*, c.SchoolId FROM Students s INNER JOIN Campuses c ON s.CampusId = c.CampusId WHERE s.StudentId = @id';
     const request = pool.request().input('id', sql.Int, id);
     
-    if (schoolId) {
-      query += ' AND SchoolId = @schoolId';
+    if (schoolId && !isSuperAdminAccess) {
+      query += ' AND c.SchoolId = @schoolId';
       request.input('schoolId', sql.Int, schoolId);
     }
 
-    if (campusIds && campusIds.length > 0) {
-      query += ' AND CampusId IN (' + campusIds.join(',') + ')';
+    if (campusIds && campusIds.length > 0 && !isSuperAdminAccess) {
+      query += ' AND s.CampusId IN (' + campusIds.join(',') + ')';
     }
     
     const result = await request.query(query);

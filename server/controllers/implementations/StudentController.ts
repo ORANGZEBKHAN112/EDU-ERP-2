@@ -7,8 +7,10 @@ export class StudentController {
 
   getStudents = async (req: any, res: Response, next: NextFunction) => {
     try {
-      const campusIds = req.user.campusIds;
-      const schoolId = req.user.schoolId;
+      // SuperAdmin can see all students, others are restricted to their campuses/school
+      const isSuperAdmin = req.user.roles.includes('SuperAdmin');
+      const campusIds = isSuperAdmin ? undefined : req.user.campusIds;
+      const schoolId = isSuperAdmin ? undefined : req.user.schoolId;
       const filterCampusId = req.query.campusId ? parseInt(req.query.campusId as string) : undefined;
       const search = req.query.search as string;
       const students = await this.studentService.getAllStudents(campusIds, schoolId, filterCampusId, search);
@@ -21,7 +23,11 @@ export class StudentController {
   getStudentById = async (req: any, res: Response, next: NextFunction) => {
     try {
       const id = parseInt(req.params.id);
-      const student = await this.studentService.getStudentById(id, req.user.campusIds, req.user.schoolId);
+      // SuperAdmin can see all students, others are restricted to their campuses/school
+      const isSuperAdmin = req.user.roles.includes('SuperAdmin');
+      const campusIds = isSuperAdmin ? undefined : req.user.campusIds;
+      const schoolId = isSuperAdmin ? undefined : req.user.schoolId;
+      const student = await this.studentService.getStudentById(id, campusIds, schoolId);
       if (!student) return res.status(404).json({ message: 'Student not found' });
       res.json(student);
     } catch (err) {
