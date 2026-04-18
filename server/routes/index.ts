@@ -80,7 +80,7 @@ router.post('/payments/initiate', authenticate, authorize(['SuperAdmin', 'Financ
 
 // Dashboard
 router.get('/dashboard/superadmin', authenticate, authorize(['SuperAdmin']), dashboardCtrl.getSuperAdminStats);
-router.get('/dashboard/campus/:campusId', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), dashboardCtrl.getCampusDashboard);
+router.get('/dashboard/campus/:campusId', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), checkCampusAccess, dashboardCtrl.getCampusDashboard);
 
 // Reports
 router.get('/reports/superadmin/overview', authenticate, authorize(['SuperAdmin']), reportCtrl.getSuperAdminOverview);

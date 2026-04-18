@@ -5,7 +5,6 @@ import {
   Users, 
   CreditCard, 
   Receipt, 
-  History, 
   Activity,
   Building2,
   MapPin,
@@ -15,13 +14,12 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../app/authStore';
 import { useAuthContextStore } from '../../store/authContextStore';
-import { canAccess } from '../../utils/rbac';
+import { getAllowedRolesForPath, hasRole } from '../../utils/rbac';
 
 interface MenuItem {
   icon: any;
   label: string;
   path: string;
-  roles: string[];
 }
 
 interface NavSection {
@@ -33,31 +31,25 @@ const navigation: NavSection[] = [
   {
     title: 'MAIN',
     items: [
-      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['SuperAdmin', 'Admin', 'Teacher', 'Accountant', 'FinanceAdmin', 'CampusAdmin', 'Principal'] },
-      { icon: Users, label: 'Students', path: '/students', roles: ['SuperAdmin', 'Admin', 'Teacher', 'CampusAdmin', 'Principal'] },
-      { icon: CreditCard, label: 'Fees', path: '/fees', roles: ['SuperAdmin', 'Admin', 'Accountant', 'FinanceAdmin'] },
-      { icon: Receipt, label: 'Payments', path: '/payments', roles: ['SuperAdmin', 'Admin', 'Accountant', 'FinanceAdmin'] },
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+      { icon: Users, label: 'Students', path: '/students' },
+      { icon: CreditCard, label: 'Fees', path: '/fees' },
+      { icon: Receipt, label: 'Payments', path: '/payments' },
     ]
   },
   {
     title: 'MANAGEMENT',
     items: [
-      { icon: Building2, label: 'Schools', path: '/tenants', roles: ['SuperAdmin'] },
-      { icon: MapPin, label: 'Campuses', path: '/campuses', roles: ['SuperAdmin', 'Admin'] },
-      { icon: UserCog, label: 'Users', path: '/users', roles: ['SuperAdmin'] },
-    ]
-  },
-  {
-    title: 'FINANCE',
-    items: [
-      { icon: History, label: 'Fee Ledger', path: '/ledger', roles: ['SuperAdmin', 'Admin', 'Accountant', 'FinanceAdmin'] },
+      { icon: Building2, label: 'Schools', path: '/tenants' },
+      { icon: MapPin, label: 'Campuses', path: '/campuses' },
+      { icon: UserCog, label: 'Users', path: '/users' },
     ]
   },
   {
     title: 'SYSTEM',
     items: [
-      { icon: Activity, label: 'System Status', path: '/system-health', roles: ['SuperAdmin'] },
-      { icon: ShieldCheck, label: 'Audit Trail', path: '/audit-logs', roles: ['SuperAdmin', 'FinanceAdmin'] },
+      { icon: Activity, label: 'System Status', path: '/system-health' },
+      { icon: ShieldCheck, label: 'Audit Trail', path: '/audit-logs' },
     ]
   }
 ];
@@ -69,10 +61,15 @@ export const Sidebar: React.FC = () => {
   // Safe role extraction with fallback
   const userRoles = userContext?.roles || [];
 
-  const filteredNavigation = navigation.map(section => ({
-    ...section,
-    items: section.items.filter(item => item.roles.some(role => userRoles.includes(role)))
-  })).filter(section => section.items.length > 0);
+  const filteredNavigation = navigation
+    .map(section => ({
+      ...section,
+      items: section.items.filter(item => {
+        const allowedRoles = getAllowedRolesForPath(item.path);
+        return !allowedRoles || hasRole(userRoles, allowedRoles);
+      })
+    }))
+    .filter(section => section.items.length > 0);
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col h-screen sticky top-0">

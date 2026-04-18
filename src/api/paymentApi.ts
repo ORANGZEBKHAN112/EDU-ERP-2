@@ -11,14 +11,20 @@ export const paymentApi = {
     referenceId?: string;
   }) => {
     const context = useAuthContextStore.getState();
-    const enrichedData = injectTenantContext(data, context);
-    const response = await api.post('/payments', enrichedData);
+    const payload = {
+      voucherId: data.voucherId,
+      amountPaid: data.amount,
+      paymentMethod: data.paymentMethod,
+      transactionRef: data.referenceId || `PAY-${Date.now()}`
+    };
+    const enrichedData = injectTenantContext(payload, context);
+    const response = await api.post('/payments/initiate', enrichedData);
     return response.data;
   },
   getAll: async (params?: any) => {
     const context = useAuthContextStore.getState();
     const enrichedParams = injectTenantContext(params || {}, context);
-    const response = await api.get('/payments', { params: enrichedParams });
+    const response = await api.get('/reports/payments', { params: enrichedParams });
     return response.data;
   }
 };

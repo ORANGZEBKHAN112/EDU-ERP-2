@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../app/authStore';
 import { useAuthContextStore } from '../store/authContextStore';
 import { authApi } from '../api/authApi';
+import { getRoleLandingPath } from '../utils/rbac';
 import { Lock, Mail, Loader2 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
@@ -16,8 +17,6 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const from = location.state?.from?.pathname || '/dashboard';
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -40,7 +39,10 @@ export const LoginPage: React.FC = () => {
         isAuthenticated: true,
       });
 
-      navigate(from, { replace: true });
+      const requestedPath = location.state?.from?.pathname;
+      const fallbackPath = getRoleLandingPath(response.user.roles || []);
+      const destination = requestedPath && requestedPath !== '/login' ? requestedPath : fallbackPath;
+      navigate(destination, { replace: true });
     } catch (err: any) {
       const message = err.response?.data?.message || 'An error occurred during login';
       setError(message);

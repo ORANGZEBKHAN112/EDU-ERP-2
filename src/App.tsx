@@ -34,16 +34,56 @@ const App: React.FC = () => {
           }
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="tenants" element={<TenantManagementPage />} />
-          <Route path="campuses" element={<CampusListPage />} />
-          <Route path="users" element={<UserManagementPage />} />
-          <Route path="students" element={<StudentsPage />} />
-          <Route path="fees" element={<FeesPage />} />
-          <Route path="payments" element={<PaymentsPage />} />
-          <Route path="ledger/:studentId" element={<LedgerPage />} />
-          <Route path="system-health" element={<SystemHealthPage />} />
-          <Route path="audit-logs" element={<AuditLogPage />} />
+          <Route path="dashboard" element={
+            <ProtectedRoute allowedRoles={['SuperAdmin', 'CampusAdmin', 'FinanceAdmin', 'Principal']}>
+              <DashboardPage />
+            </ProtectedRoute>
+          } />
+          <Route path="tenants" element={
+            <ProtectedRoute allowedRoles={['SuperAdmin']}>
+              <TenantManagementPage />
+            </ProtectedRoute>
+          } />
+          <Route path="campuses" element={
+            <ProtectedRoute allowedRoles={['SuperAdmin', 'CampusAdmin', 'Principal']}>
+              <CampusListPage />
+            </ProtectedRoute>
+          } />
+          <Route path="users" element={
+            <ProtectedRoute allowedRoles={['SuperAdmin', 'CampusAdmin', 'Principal']}>
+              <UserManagementPage />
+            </ProtectedRoute>
+          } />
+          <Route path="students" element={
+            <ProtectedRoute allowedRoles={['SuperAdmin', 'CampusAdmin', 'Principal']}>
+              <StudentsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="fees" element={
+            <ProtectedRoute allowedRoles={['SuperAdmin', 'FinanceAdmin']}>
+              <FeesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="payments" element={
+            <ProtectedRoute allowedRoles={['SuperAdmin', 'FinanceAdmin']}>
+              <PaymentsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="ledger/:studentId" element={
+            <ProtectedRoute allowedRoles={['SuperAdmin', 'FinanceAdmin']}>
+              <LedgerPage />
+            </ProtectedRoute>
+          } />
+          <Route path="system-health" element={
+            <ProtectedRoute allowedRoles={['SuperAdmin']}>
+              <SystemHealthPage />
+            </ProtectedRoute>
+          } />
+          <Route path="audit-logs" element={
+            <ProtectedRoute allowedRoles={['SuperAdmin', 'FinanceAdmin']}>
+              <AuditLogPage />
+            </ProtectedRoute>
+          } />
         </Route>
 
         {/* Fallback */}

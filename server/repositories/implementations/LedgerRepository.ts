@@ -3,6 +3,24 @@ import { StudentFeeLedger } from '../../models';
 import { ILedgerRepository } from '../../interfaces/repositories/ILedgerRepository';
 
 export class LedgerRepository implements ILedgerRepository {
+  private buildIntInClause(values: number[], prefix: string, request: sql.Request): string {
+    const sanitized = values
+      .map(v => Number(v))
+      .filter(v => Number.isInteger(v));
+
+    if (sanitized.length === 0) {
+      return 'NULL';
+    }
+
+    return sanitized
+      .map((value, index) => {
+        const name = `${prefix}${index}`;
+        request.input(name, sql.Int, value);
+        return `@${name}`;
+      })
+      .join(',');
+  }
+
   async getLatestByStudent(studentId: number, month: string, transaction?: sql.Transaction): Promise<StudentFeeLedger | null> {
     const request = transaction ? new sql.Request(transaction) : (await poolPromise).request();
     const result = await request
@@ -94,9 +112,10 @@ export class LedgerRepository implements ILedgerRepository {
     if (studentIds.length === 0) return [];
 
     const pool = await poolPromise;
-    const idsList = studentIds.join(',');
+    const request = pool.request();
+    const idsList = this.buildIntInClause(studentIds, 'studentId', request);
     
-    const result = await pool.request()
+    const result = await request
       .input('month', sql.NVarChar, month)
       .query(`
         SELECT StudentId, COALESCE(ClosingBalance, 0) as amount
@@ -110,6 +129,16 @@ export class LedgerRepository implements ILedgerRepository {
       `);
 
     return result.recordset;
+  }
+
+  async getByCorrelationId(correlationId: string): Promise<StudentFeeLedger | null> {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('correlationId', sql.NVarChar, correlationId)
+      .query('SELECT TOP 1 * FROM StudentFeeLedger WHERE CorrelationId = @correlationId ORDER BY CreatedAt DESC');
+
+    if (result.recordset.length === 0) return null;
+    return this.mapToLedger(result.recordset[0]);
   }
 
   private mapToLedger(l: any): StudentFeeLedger {

@@ -8,8 +8,8 @@ import { BusinessRuleError, NotFoundError } from '../../utils/errors';
 import { eventBus, FinancialEventType, VoucherStatus } from '../events/FinancialEventBus';
 import { AuditService, AuditAction } from '../auditService';
 import { v4 as uuidv4 } from 'uuid';
-import { Payment } from '../../models';
-import { RequestContext, GenerateVouchersDto, RecordPaymentDto } from '../../dtos/fee.dto';
+import { FeeStructure, Payment } from '../../models';
+import { CreateFeeStructureDto, RequestContext, GenerateVouchersDto, RecordPaymentDto } from '../../dtos/fee.dto';
 
 export class FeeService implements IFeeService {
   constructor(
@@ -32,9 +32,6 @@ export class FeeService implements IFeeService {
     // if (students.length > 10) {
     //   return this.generateVouchersBatchOptimized(ctx, dto, students);
     // }
-    return this.generateVouchersSequential(ctx, dto, students);
-
-    // Original implementation for smaller datasets
     return this.generateVouchersSequential(ctx, dto, students);
   }
 
@@ -325,21 +322,28 @@ export class FeeService implements IFeeService {
 
   async initiatePayment(ctx: RequestContext, dto: RecordPaymentDto): Promise<Payment> {
     const { voucherId, amountPaid, paymentMethod, transactionRef } = dto;
-
-    const existingPayment = await this.feeRepo.getPaymentByRef(transactionRef);
-    if (existingPayment) {
-      console.log(`[PAYMENT] Idempotency triggered: Transaction ${transactionRef} already exists. Returning success.`);
-      return existingPayment;
+    if (amountPaid <= 0) {
+      throw new BusinessRuleError('Payment amount must be greater than zero');
     }
 
     const txManager = await TransactionManager.startTransaction();
     try {
+      const existingPayment = await this.feeRepo.getPaymentByRef(transactionRef);
+      if (existingPayment) {
+        console.log(`[PAYMENT] Idempotency triggered: Transaction ${transactionRef} already exists. Returning success.`);
+        await txManager.rollback();
+        return existingPayment;
+      }
+
       const voucher = await this.feeRepo.getVoucherById(voucherId, ctx.campusIds);
       if (!voucher) throw new NotFoundError('Voucher not found');
 
       // 1. Lock and Fetch current ledger state
       const currentLedger = await this.ledgerRepo.getLatestByStudent(voucher.studentId, voucher.month, txManager.transaction);
       if (!currentLedger) throw new Error('Ledger not found for payment application');
+      if (amountPaid > currentLedger.closingBalance) {
+        throw new BusinessRuleError('Payment amount cannot exceed outstanding balance');
+      }
 
       const correlationId = uuidv4();
       const transactionId = uuidv4();

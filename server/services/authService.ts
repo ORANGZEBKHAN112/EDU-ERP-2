@@ -4,7 +4,10 @@ import { UserRepository } from '../repositories';
 import { User } from '../models';
 import { AuthError } from '../utils/errors';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
 
 export class AuthService {
   private userRepo = new UserRepository();

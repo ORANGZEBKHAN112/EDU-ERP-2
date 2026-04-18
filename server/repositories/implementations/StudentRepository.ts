@@ -3,6 +3,24 @@ import { Student } from '../../models';
 import { IStudentRepository } from '../../interfaces/repositories/IStudentRepository';
 
 export class StudentRepository implements IStudentRepository {
+  private buildIntInClause(values: number[], prefix: string, request: sql.Request): string {
+    const sanitized = values
+      .map(v => Number(v))
+      .filter(v => Number.isInteger(v));
+
+    if (sanitized.length === 0) {
+      return 'NULL';
+    }
+
+    return sanitized
+      .map((value, index) => {
+        const name = `${prefix}${index}`;
+        request.input(name, sql.Int, value);
+        return `@${name}`;
+      })
+      .join(',');
+  }
+
   async getAll(campusIds?: number[], schoolId?: number, filterCampusId?: number, search?: string): Promise<Student[]> {
     const pool = await poolPromise;
     
@@ -18,7 +36,8 @@ export class StudentRepository implements IStudentRepository {
     }
 
     if (campusIds && campusIds.length > 0 && !isSuperAdminAccess) {
-      query += ' AND s.CampusId IN (' + campusIds.join(',') + ')';
+      const campusClause = this.buildIntInClause(campusIds, 'campusId', request);
+      query += ` AND s.CampusId IN (${campusClause})`;
     }
 
     if (filterCampusId) {
@@ -63,7 +82,8 @@ export class StudentRepository implements IStudentRepository {
     }
 
     if (campusIds && campusIds.length > 0 && !isSuperAdminAccess) {
-      query += ' AND s.CampusId IN (' + campusIds.join(',') + ')';
+      const campusClause = this.buildIntInClause(campusIds, 'campusId', request);
+      query += ` AND s.CampusId IN (${campusClause})`;
     }
     
     const result = await request.query(query);

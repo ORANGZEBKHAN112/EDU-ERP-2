@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../app/authStore';
 import { useAuthContextStore } from '../../store/authContextStore';
-import { canAccess } from '../../utils/rbac';
+import { getRoleLandingPath, hasRole } from '../../utils/rbac';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -22,12 +22,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
   const userRoles = (userContext?.roles || []).map(r => String(r).toLowerCase());
   
   if (allowedRoles && allowedRoles.length > 0) {
-    const normalizedAllowed = allowedRoles.map(r => String(r).toLowerCase());
-    const hasAccess = userRoles.some(role => normalizedAllowed.includes(role));
+    const hasAccess = hasRole(userRoles, allowedRoles);
 
     if (!hasAccess && userRoles.length > 0) {
-      console.warn('Unauthorized role access attempt:', { userRoles, normalizedAllowed });
-      return <Navigate to="/dashboard" replace />;
+      return <Navigate to={getRoleLandingPath(userRoles)} replace />;
     }
   }
 
