@@ -25,6 +25,7 @@ const eventCtrl = container.financialEventController;
 const systemCtrl = container.systemController;
 const userCtrl = container.userController;
 const classCtrl = container.classController;
+const sectionCtrl = container.sectionController;
 
 // Controllers not yet refactored to Container (using legacy instantiation for now)
 const reportCtrl = new ReportController();
@@ -62,6 +63,14 @@ router.put('/campuses/:id', authenticate, authorize(['SuperAdmin']), campusCtrl.
 // Classes
 router.get('/classes/:campusId', authenticate, checkCampusAccess, classCtrl.getClasses);
 router.post('/classes', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), classCtrl.createClass);
+
+// Sections
+router.get('/sections/class/:classId', authenticate, checkCampusAccess, sectionCtrl.getSectionsByClass);
+router.get('/sections/school/:schoolId', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), sectionCtrl.getSectionsBySchool);
+router.get('/sections/:id', authenticate, checkCampusAccess, sectionCtrl.getSectionById);
+router.post('/sections', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), sectionCtrl.createSection);
+router.put('/sections/:id', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), sectionCtrl.updateSection);
+router.delete('/sections/:id', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), sectionCtrl.deleteSection);
 
 // Students
 router.get('/students', authenticate, checkCampusAccess, studentCtrl.getStudents);

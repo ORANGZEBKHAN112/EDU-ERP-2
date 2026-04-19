@@ -9,6 +9,7 @@ export interface FeaturePolicy {
 export const APP_FEATURES: FeaturePolicy[] = [
   { key: 'dashboard', path: '/dashboard', allowedRoles: ['SuperAdmin', 'CampusAdmin', 'FinanceAdmin', 'Principal'] },
   { key: 'students', path: '/students', allowedRoles: ['SuperAdmin', 'CampusAdmin', 'Principal'] },
+  { key: 'classes', path: '/classes', allowedRoles: ['SuperAdmin', 'CampusAdmin', 'Principal'] },
   { key: 'fees', path: '/fees', allowedRoles: ['SuperAdmin', 'FinanceAdmin'] },
   { key: 'payments', path: '/payments', allowedRoles: ['SuperAdmin', 'FinanceAdmin'] },
   { key: 'campuses', path: '/campuses', allowedRoles: ['SuperAdmin', 'CampusAdmin', 'Principal'] },

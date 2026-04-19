@@ -3,7 +3,10 @@ import { useAuthContextStore } from '../store/authContextStore';
 import { injectTenantContext } from '../utils/tenantHelper';
 
 export const feeApi = {
-  configure: async (data: { classId: number; monthlyFee: number; transportFee?: number }) => {
+  /**
+   * Configure fee structure for a class
+   */
+  configure: async (data: { classId: number; monthlyFee: number; transportFee?: number }): Promise<any> => {
     const context = useAuthContextStore.getState();
     const campusId = context.campusIds?.[0];
     if (!campusId) {
@@ -19,12 +22,25 @@ export const feeApi = {
     };
     const enrichedData = injectTenantContext(payload, context);
     const response = await api.post('/fees/structure', enrichedData);
-    return response.data;
+    return response.data?.data ?? response.data;
   },
-  getConfigurations: async () => {
-    return [];
+
+  /**
+   * Get fee configurations
+   */
+  getConfigurations: async (): Promise<any[]> => {
+    try {
+      const response = await api.get('/fees/configurations');
+      return Array.isArray(response.data?.data) ? response.data.data : (Array.isArray(response.data) ? response.data : []);
+    } catch {
+      return [];
+    }
   },
-  generateVouchers: async (data: { month: number; year: number }) => {
+
+  /**
+   * Generate vouchers for a month/year
+   */
+  generateVouchers: async (data: { month: number; year: number }): Promise<any> => {
     const context = useAuthContextStore.getState();
     const campusId = context.campusIds?.[0];
     if (!campusId) {
@@ -33,9 +49,20 @@ export const feeApi = {
     const month = `${data.year}-${String(data.month).padStart(2, '0')}`;
     const enrichedData = injectTenantContext({ campusId, month }, context);
     const response = await api.post('/fees/generate-vouchers', enrichedData);
-    return response.data;
+    return response.data?.data ?? response.data;
   },
-  getVouchers: async (params?: any) => {
-    return [];
+
+  /**
+   * Get vouchers with optional filters
+   */
+  getVouchers: async (params?: any): Promise<any[]> => {
+    try {
+      const context = useAuthContextStore.getState();
+      const enrichedParams = injectTenantContext(params || {}, context);
+      const response = await api.get('/fees/vouchers', { params: enrichedParams });
+      return Array.isArray(response.data?.data) ? response.data.data : (Array.isArray(response.data) ? response.data : []);
+    } catch {
+      return [];
+    }
   },
 };

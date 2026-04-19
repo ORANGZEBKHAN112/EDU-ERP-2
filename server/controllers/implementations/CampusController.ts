@@ -13,7 +13,7 @@ export class CampusController {
       } else {
         campuses = await this.schoolService.getAllCampuses();
       }
-      res.json(campuses);
+      res.json({ success: true, data: campuses });
     } catch (err) {
       next(err);
     }
@@ -21,8 +21,12 @@ export class CampusController {
 
   getBySchool = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const campuses = await this.schoolService.getCampusesBySchool(parseInt(req.params.schoolId));
-      res.json(campuses);
+      const schoolId = parseInt(req.params.schoolId);
+      if (!schoolId) {
+        return res.status(400).json({ success: false, message: 'schoolId is required' });
+      }
+      const campuses = await this.schoolService.getCampusesBySchool(schoolId);
+      res.json({ success: true, data: campuses });
     } catch (err) {
       next(err);
     }
@@ -30,6 +34,9 @@ export class CampusController {
 
   createCampus = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      if (!req.body.schoolId || !req.body.campusName) {
+        return res.status(400).json({ success: false, message: 'schoolId and campusName are required' });
+      }
       const campus = await this.schoolService.createCampus({
         schoolId: req.body.schoolId,
         name: req.body.campusName,
@@ -37,7 +44,7 @@ export class CampusController {
         city: req.body.city,
         address: req.body.address
       });
-      res.json(campus);
+      res.status(201).json({ success: true, data: campus });
     } catch (err) {
       next(err);
     }
@@ -45,8 +52,12 @@ export class CampusController {
 
   updateCampus = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const campus = await this.schoolService.updateCampus(parseInt(req.params.id), req.body);
-      res.json(campus);
+      const campusId = parseInt(req.params.id);
+      if (!campusId) {
+        return res.status(400).json({ success: false, message: 'id is required' });
+      }
+      const campus = await this.schoolService.updateCampus(campusId, req.body);
+      res.json({ success: true, data: campus });
     } catch (err) {
       next(err);
     }

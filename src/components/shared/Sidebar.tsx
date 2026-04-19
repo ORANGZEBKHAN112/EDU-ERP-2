@@ -10,7 +10,8 @@ import {
   MapPin,
   UserCog,
   LogOut,
-  ShieldCheck
+  ShieldCheck,
+  BookOpen
 } from 'lucide-react';
 import { useAuthStore } from '../../app/authStore';
 import { useAuthContextStore } from '../../store/authContextStore';
@@ -42,6 +43,7 @@ const navigation: NavSection[] = [
     items: [
       { icon: Building2, label: 'Schools', path: '/tenants' },
       { icon: MapPin, label: 'Campuses', path: '/campuses' },
+      { icon: BookOpen, label: 'Classes', path: '/classes' },
       { icon: UserCog, label: 'Users', path: '/users' },
     ]
   },

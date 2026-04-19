@@ -22,10 +22,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
   const userRoles = (userContext?.roles || []).map(r => String(r).toLowerCase());
   
   if (allowedRoles && allowedRoles.length > 0) {
-    const hasAccess = hasRole(userRoles, allowedRoles);
+    const normalizedAllowedRoles = allowedRoles.map(r => String(r).toLowerCase());
+    const hasAccess = normalizedAllowedRoles.some(role => userRoles.includes(role));
 
-    if (!hasAccess && userRoles.length > 0) {
-      return <Navigate to={getRoleLandingPath(userRoles)} replace />;
+    if (!hasAccess) {
+      const fallbackPath = getRoleLandingPath(userRoles.length > 0 ? userRoles : ['student']);
+      return <Navigate to={fallbackPath} replace />;
     }
   }
 

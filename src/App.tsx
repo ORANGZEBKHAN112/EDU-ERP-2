@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/shared/ProtectedRoute';
+import { getAllowedRolesForPath } from './utils/rbac';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -13,6 +14,7 @@ import { AuditLogPage } from './pages/AuditLogPage';
 import TenantManagementPage from './modules/admin/TenantManagementPage';
 import CampusListPage from './modules/system/CampusListPage';
 import UserManagementPage from './modules/admin/UserManagementPage';
+import ClassesPage from './pages/ClassesPage';
 import { Toaster } from 'sonner';
 
 const App: React.FC = () => {
@@ -35,52 +37,57 @@ const App: React.FC = () => {
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={
-            <ProtectedRoute allowedRoles={['SuperAdmin', 'CampusAdmin', 'FinanceAdmin', 'Principal']}>
+            <ProtectedRoute allowedRoles={getAllowedRolesForPath('/dashboard')}>
               <DashboardPage />
             </ProtectedRoute>
           } />
           <Route path="tenants" element={
-            <ProtectedRoute allowedRoles={['SuperAdmin']}>
+            <ProtectedRoute allowedRoles={getAllowedRolesForPath('/tenants')}>
               <TenantManagementPage />
             </ProtectedRoute>
           } />
           <Route path="campuses" element={
-            <ProtectedRoute allowedRoles={['SuperAdmin', 'CampusAdmin', 'Principal']}>
+            <ProtectedRoute allowedRoles={getAllowedRolesForPath('/campuses')}>
               <CampusListPage />
             </ProtectedRoute>
           } />
+          <Route path="classes" element={
+            <ProtectedRoute allowedRoles={getAllowedRolesForPath('/classes')}>
+              <ClassesPage />
+            </ProtectedRoute>
+          } />
           <Route path="users" element={
-            <ProtectedRoute allowedRoles={['SuperAdmin', 'CampusAdmin', 'Principal']}>
+            <ProtectedRoute allowedRoles={getAllowedRolesForPath('/users')}>
               <UserManagementPage />
             </ProtectedRoute>
           } />
           <Route path="students" element={
-            <ProtectedRoute allowedRoles={['SuperAdmin', 'CampusAdmin', 'Principal']}>
+            <ProtectedRoute allowedRoles={getAllowedRolesForPath('/students')}>
               <StudentsPage />
             </ProtectedRoute>
           } />
           <Route path="fees" element={
-            <ProtectedRoute allowedRoles={['SuperAdmin', 'FinanceAdmin']}>
+            <ProtectedRoute allowedRoles={getAllowedRolesForPath('/fees')}>
               <FeesPage />
             </ProtectedRoute>
           } />
           <Route path="payments" element={
-            <ProtectedRoute allowedRoles={['SuperAdmin', 'FinanceAdmin']}>
+            <ProtectedRoute allowedRoles={getAllowedRolesForPath('/payments')}>
               <PaymentsPage />
             </ProtectedRoute>
           } />
           <Route path="ledger/:studentId" element={
-            <ProtectedRoute allowedRoles={['SuperAdmin', 'FinanceAdmin']}>
+            <ProtectedRoute allowedRoles={getAllowedRolesForPath('/payments')}>
               <LedgerPage />
             </ProtectedRoute>
           } />
           <Route path="system-health" element={
-            <ProtectedRoute allowedRoles={['SuperAdmin']}>
+            <ProtectedRoute allowedRoles={getAllowedRolesForPath('/system-health')}>
               <SystemHealthPage />
             </ProtectedRoute>
           } />
           <Route path="audit-logs" element={
-            <ProtectedRoute allowedRoles={['SuperAdmin', 'FinanceAdmin']}>
+            <ProtectedRoute allowedRoles={getAllowedRolesForPath('/audit-logs')}>
               <AuditLogPage />
             </ProtectedRoute>
           } />
