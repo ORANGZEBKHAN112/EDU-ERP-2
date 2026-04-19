@@ -39,15 +39,22 @@ export default function ClassesPage() {
   }, [selectedCampus]);
 
   const fetchClasses = async () => {
-    if (!selectedCampus) return;
+    if (!selectedCampus) {
+      console.warn('⚠️ No campus selected');
+      return;
+    }
     
     try {
       setLoading(true);
       setError(null);
+      console.log('📡 Fetching classes for campus:', selectedCampus);
       const data = await classApi.getAll(schoolId, selectedCampus);
+      console.log('✅ Classes fetched successfully:', data);
       setClasses(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch classes');
+      console.error('❌ Failed to fetch classes:', err);
+      const errorMessage = err.message || 'Failed to fetch classes';
+      setError(errorMessage);
       setClasses([]);
     } finally {
       setLoading(false);
@@ -163,8 +170,17 @@ export default function ClassesPage() {
         )}
       </div>
 
+      {/* No Campuses Message */}
+      {campusIds.length === 0 && !loading && (
+        <div className="border-2 border-dashed border-yellow-200 rounded-lg bg-yellow-50 p-6 text-center">
+          <AlertCircle className="mx-auto text-yellow-600 mb-2" size={32} />
+          <h3 className="text-lg font-bold text-yellow-900 mb-1">No Campuses Available</h3>
+          <p className="text-yellow-700">Please contact your administrator to assign you to a campus before managing classes.</p>
+        </div>
+      )}
+
       {/* Campus Selector */}
-      {campusIds.length > 1 && (
+      {campusIds.length > 0 && campusIds.length > 1 && (
         <div className="bg-white rounded-lg border border-slate-200 p-4">
           <label className="block text-sm font-medium text-slate-700 mb-2">
             Select Campus
@@ -211,15 +227,15 @@ export default function ClassesPage() {
       )}
 
       {/* Loading State */}
-      {loading && (
+      {loading && campusIds.length > 0 && (
         <div className="flex items-center justify-center py-12">
           <Loader size={32} className="animate-spin text-blue-600" />
-          <span className="ml-3 text-slate-600">Loading classes...</span>
+          <span className="ml-3 text-slate-600">Loading classes for campus {selectedCampus}...</span>
         </div>
       )}
 
       {/* Classes List */}
-      {!loading && classes.length > 0 && (
+      {!loading && campusIds.length > 0 && classes.length > 0 && (
         <div className="space-y-3">
           {classes.map((classItem) => (
             <div
@@ -316,7 +332,7 @@ export default function ClassesPage() {
       )}
 
       {/* Empty State */}
-      {!loading && classes.length === 0 && (
+      {!loading && campusIds.length > 0 && classes.length === 0 && (
         <div className="border-2 border-dashed border-slate-200 rounded-lg p-12 text-center">
           <div className="text-slate-400 mb-3">
             <Plus size={40} className="mx-auto" />
