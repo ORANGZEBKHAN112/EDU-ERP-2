@@ -1,10 +1,26 @@
 import { Response, NextFunction } from 'express';
 import { IFeeService } from '../../interfaces/services/IFeeService';
-import { generateVouchersSchema } from '../../utils/validation';
-import { RequestContext } from '../../dtos/fee.dto';
+import { generateVouchersSchema, createFeeStructureSchema } from '../../utils/validation';
+import { RequestContext, CreateFeeStructureDto } from '../../dtos/fee.dto';
 
 export class FeeController {
   constructor(private feeService: IFeeService) {}
+
+  createFeeStructure = async (req: any, res: Response, next: NextFunction) => {
+    try {
+      const validated = createFeeStructureSchema.parse(req.body);
+      const ctx: RequestContext = {
+        schoolId: req.user.schoolId,
+        campusIds: req.user.campusIds,
+        userId: req.user.id
+      };
+      
+      const structure = await this.feeService.createFeeStructure(ctx, validated);
+      res.status(201).json({ message: 'Fee structure created successfully', structure });
+    } catch (err: any) {
+      next(err);
+    }
+  };
 
   generateVouchers = async (req: any, res: Response, next: NextFunction) => {
     try {

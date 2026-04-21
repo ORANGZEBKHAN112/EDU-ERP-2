@@ -49,8 +49,20 @@ export interface UserCampus {
 
 export interface Class {
   id: number;
+  schoolId: number;
   campusId: number;
   name: string;
+}
+
+export interface Section {
+  id: number;
+  classId: number;
+  campusId: number;
+  schoolId: number;
+  name: string;
+  isActive?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface Student {

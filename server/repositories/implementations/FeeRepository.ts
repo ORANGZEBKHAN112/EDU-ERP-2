@@ -3,6 +3,24 @@ import { FeeVoucher, StudentFeeLedger, FeeAdjustment, FeeStructure, Payment } fr
 import { IFeeRepository } from '../../interfaces/repositories/IFeeRepository';
 
 export class FeeRepository implements IFeeRepository {
+  private buildIntInClause(values: number[], prefix: string, request: sql.Request): string {
+    const sanitized = values
+      .map(v => Number(v))
+      .filter(v => Number.isInteger(v));
+
+    if (sanitized.length === 0) {
+      return 'NULL';
+    }
+
+    return sanitized
+      .map((value, index) => {
+        const name = `${prefix}${index}`;
+        request.input(name, sql.Int, value);
+        return `@${name}`;
+      })
+      .join(',');
+  }
+
   async getStructure(campusId: number, classId: number): Promise<FeeStructure | undefined> {
     const pool = await poolPromise;
     const result = await pool.request()
@@ -22,20 +40,153 @@ export class FeeRepository implements IFeeRepository {
     };
   }
 
+  async createStructure(structure: Omit<FeeStructure, 'id'>, transaction?: sql.Transaction): Promise<FeeStructure> {
+    const request = transaction ? new sql.Request(transaction) : (await poolPromise).request();
+    const result = await request
+      .input('campusId', sql.Int, structure.campusId)
+      .input('classId', sql.Int, structure.classId)
+      .input('monthlyFee', sql.Decimal(18, 2), structure.monthlyFee)
+      .input('transportFee', sql.Decimal(18, 2), structure.transportFee)
+      .input('examFee', sql.Decimal(18, 2), structure.examFee)
+      .input('effectiveFromMonth', sql.NVarChar, structure.effectiveFromMonth)
+      .query(`INSERT INTO FeeStructure (CampusId, ClassId, MonthlyFee, TransportFee, ExamFee, EffectiveFromMonth)
+              OUTPUT INSERTED.FeeStructureId, INSERTED.CampusId, INSERTED.ClassId, INSERTED.MonthlyFee, INSERTED.TransportFee, INSERTED.ExamFee, INSERTED.EffectiveFromMonth
+              VALUES (@campusId, @classId, @monthlyFee, @transportFee, @examFee, @effectiveFromMonth)`);
+
+    const r = result.recordset[0];
+    return {
+      id: r.FeeStructureId,
+      campusId: r.CampusId,
+      classId: r.ClassId,
+      monthlyFee: r.MonthlyFee,
+      transportFee: r.TransportFee,
+      examFee: r.ExamFee,
+      effectiveFromMonth: r.EffectiveFromMonth
+    };
+  }
+
+  async createVouchersBulk(vouchers: any[], transaction?: sql.Transaction): Promise<any[]> {
+    if (vouchers.length === 0) return [];
+
+    const pool = transaction ? transaction : await poolPromise;
+    const createdVouchers = [];
+
+    // Insert vouchers one by one (simpler approach)
+    for (const voucher of vouchers) {
+      const result = await pool.request()
+        .input('studentId', sql.Int, voucher.studentId)
+        .input('campusId', sql.Int, voucher.campusId)
+        .input('month', sql.NVarChar, voucher.month)
+        .input('totalAmount', sql.Decimal(18, 2), voucher.totalAmount)
+        .input('dueDate', sql.DateTime, voucher.dueDate)
+        .input('status', sql.NVarChar, voucher.status)
+        .input('correlationId', sql.NVarChar, voucher.correlationId)
+        .query(`
+          INSERT INTO FeeVouchers (StudentId, CampusId, Month, TotalAmount, DueDate, Status, CorrelationId)
+          OUTPUT INSERTED.VoucherId, INSERTED.StudentId, INSERTED.CampusId, INSERTED.Month, INSERTED.TotalAmount, INSERTED.DueDate, INSERTED.Status, INSERTED.GeneratedAt, INSERTED.CorrelationId
+          VALUES (@studentId, @campusId, @month, @totalAmount, @dueDate, @status, @correlationId)
+        `);
+
+      createdVouchers.push({
+        id: result.recordset[0].VoucherId,
+        studentId: result.recordset[0].StudentId,
+        campusId: result.recordset[0].CampusId,
+        month: result.recordset[0].Month,
+        totalAmount: result.recordset[0].TotalAmount,
+        dueDate: result.recordset[0].DueDate,
+        status: result.recordset[0].Status as 'Paid' | 'Unpaid',
+        generatedAt: result.recordset[0].GeneratedAt,
+        correlationId: result.recordset[0].CorrelationId
+      });
+    }
+
+    return createdVouchers;
+  }
+
+  async getVouchersBulk(studentIds: number[], month: string): Promise<any[]> {
+    if (studentIds.length === 0) return [];
+
+    const pool = await poolPromise;
+    const request = pool.request();
+    const idsList = this.buildIntInClause(studentIds, 'studentId', request);
+    
+    const result = await request
+      .input('month', sql.NVarChar, month)
+      .query(`
+        SELECT * FROM FeeVouchers 
+        WHERE StudentId IN (${idsList}) AND Month = @month
+      `);
+
+    return result.recordset.map(r => ({
+      id: r.VoucherId,
+      studentId: r.StudentId,
+      campusId: r.CampusId,
+      month: r.Month,
+      totalAmount: r.TotalAmount,
+      dueDate: r.DueDate,
+      status: r.Status as 'Paid' | 'Unpaid',
+      generatedAt: r.GeneratedAt,
+      correlationId: r.CorrelationId
+    }));
+  }
+
+  async getStructuresBulk(classIds: number[], campusId: number): Promise<any[]> {
+    if (classIds.length === 0) return [];
+
+    const pool = await poolPromise;
+    const request = pool.request();
+    const idsList = this.buildIntInClause(classIds, 'classId', request);
+    
+    const result = await request
+      .input('campusId', sql.Int, campusId)
+      .query(`
+        SELECT * FROM FeeStructure 
+        WHERE ClassId IN (${idsList}) AND CampusId = @campusId
+      `);
+
+    return result.recordset.map(r => ({
+      id: r.FeeStructureId,
+      campusId: r.CampusId,
+      classId: r.ClassId,
+      monthlyFee: r.MonthlyFee,
+      transportFee: r.TransportFee,
+      examFee: r.ExamFee,
+      effectiveFromMonth: r.EffectiveFromMonth
+    }));
+  }
+
+  async getAdjustmentsBulk(studentIds: number[], month: string): Promise<any[]> {
+    if (studentIds.length === 0) return [];
+
+    const pool = await poolPromise;
+    const request = pool.request();
+    const idsList = this.buildIntInClause(studentIds, 'studentId', request);
+    
+    const result = await request
+      .input('month', sql.NVarChar, month)
+      .query(`
+        SELECT * FROM FeeAdjustments 
+        WHERE StudentId IN (${idsList}) AND Month = @month
+      `);
+
+    return result.recordset.map(r => ({
+      id: r.AdjustmentId,
+      studentId: r.StudentId,
+      month: r.Month,
+      type: r.AdjustmentType,
+      amount: r.Amount,
+      reason: r.Reason,
+      appliedAt: r.AppliedAt
+    }));
+  }
+
   async getVoucher(studentId: number, month: string, campusIds?: number[]): Promise<FeeVoucher | undefined> {
     const pool = await poolPromise;
-    
-    // Strict isolation: if no campusIds provided (and not superadmin in context logic), block access
-    if (!campusIds || campusIds.length === 0) return undefined;
-
-    let query = 'SELECT * FROM FeeVouchers WHERE StudentId = @studentId AND Month = @month';
     const request = pool.request()
       .input('studentId', sql.Int, studentId)
       .input('month', sql.NVarChar, month);
-    
-    query += ' AND CampusId IN (' + campusIds.join(',') + ')';
-    
-    const result = await request.query(query);
+
+    const result = await request.query('SELECT * FROM FeeVouchers WHERE StudentId = @studentId AND Month = @month');
     const r = result.recordset[0];
     if (!r) return undefined;
     return {
@@ -58,8 +209,8 @@ export class FeeRepository implements IFeeRepository {
 
     let query = 'SELECT * FROM FeeVouchers WHERE VoucherId = @id';
     const request = pool.request().input('id', sql.Int, id);
-    
-    query += ' AND CampusId IN (' + campusIds.join(',') + ')';
+    const campusClause = this.buildIntInClause(campusIds, 'campusId', request);
+    query += ` AND CampusId IN (${campusClause})`;
     
     const result = await request.query(query);
     const r = result.recordset[0];
@@ -205,10 +356,12 @@ export class FeeRepository implements IFeeRepository {
     // Strict isolation: block access if no campusIds authorized
     if (!campusIds || campusIds.length === 0) return [];
 
+    const request = pool.request();
     let query = 'SELECT p.* FROM Payments p INNER JOIN FeeVouchers v ON p.VoucherId = v.VoucherId';
-    query += ' WHERE v.CampusId IN (' + campusIds.join(',') + ')';
+    const campusClause = this.buildIntInClause(campusIds, 'campusId', request);
+    query += ` WHERE v.CampusId IN (${campusClause})`;
     
-    const result = await pool.request().query(query);
+    const result = await request.query(query);
     return result.recordset.map(r => ({
       id: r.PaymentId,
       voucherId: r.VoucherId,

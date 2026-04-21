@@ -24,29 +24,46 @@ export const DashboardPage: React.FC = () => {
       setError(null);
       try {
         const user = useAuthContextStore.getState().user;
-        const isSuperAdmin = user.roles.some(r => r.toLowerCase() === 'superadmin');
-        const campusIds = useAuthContextStore.getState().campusIds;
+        const isSuperAdmin = user?.roles?.some(r => String(r).toLowerCase() === 'superadmin') ?? false;
+        const campusIds = useAuthContextStore.getState().campusIds || [];
+
+        if (!isSuperAdmin && campusIds.length === 0) {
+          setError('No campus assigned to user');
+          setIsLoading(false);
+          return;
+        }
 
         const [statsRes, healthRes] = await Promise.all([
           isSuperAdmin 
             ? dashboardApi.getSuperAdminStats() 
-            : dashboardApi.getCampusStats(campusIds[0]),
+            : dashboardApi.getCampusStats(campusIds[0] || 0),
           systemApi.getHealth()
         ]);
 
-        const statsData = unwrap(statsRes);
-        const healthData = unwrap(healthRes);
+        // Safely extract data with fallbacks
+        const statsData = statsRes || {};
+        const healthData = healthRes || { status: 'ok' };
         
         setStats({
-          totalStudents: statsData.totalStudents || statsData.totalStudentsCount || 0,
-          totalRevenue: statsData.totalRevenue || statsData.campusRevenue || 0,
-          pendingFees: statsData.totalPendingDues || statsData.pendingDues || 0,
-          activeClasses: statsData.totalClasses || 0,
-          systemStatus: healthData.status === 'ok' ? 'HEALTHY' : (healthData.status === 'error' ? 'CRITICAL' : 'DEGRADED')
+          totalStudents: Number(statsData.totalStudents ?? statsData.totalStudentsCount ?? 0) || 0,
+          totalRevenue: Number(statsData.totalRevenue ?? statsData.campusRevenue ?? 0) || 0,
+          pendingFees: Number(statsData.totalPendingDues ?? statsData.pendingDues ?? 0) || 0,
+          activeClasses: Number(statsData.totalClasses ?? 0) || 0,
+          systemStatus: healthData.status === 'ok' || healthData.status === 'healthy' 
+            ? 'HEALTHY' 
+            : (healthData.status === 'error' || healthData.status === 'critical' ? 'CRITICAL' : 'DEGRADED')
         });
       } catch (err: any) {
         console.error('Dashboard fetch error:', err);
         setError('Failed to load dashboard data. Please try again later.');
+        // Set default empty stats on error
+        setStats({
+          totalStudents: 0,
+          totalRevenue: 0,
+          pendingFees: 0,
+          activeClasses: 0,
+          systemStatus: 'DEGRADED'
+        });
       } finally {
         setIsLoading(false);
       }

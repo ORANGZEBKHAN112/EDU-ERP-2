@@ -19,6 +19,7 @@ export interface Campus {
 
 export interface User {
   id: number;
+  schoolId: number;
   fullName: string;
   email: string;
   passwordHash: string;
@@ -46,12 +47,28 @@ export interface UserCampus {
 
 export interface Class {
   id: number;
+  schoolId: number;
   campusId: number;
   name: string;
+  isActive?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface Section {
+  id: number;
+  classId: number;
+  campusId: number;
+  schoolId: number;
+  name: string;
+  isActive?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface Student {
   id: number;
+  schoolId: number;
   campusId: number;
   classId: number;
   admissionNo: string;

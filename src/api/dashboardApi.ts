@@ -1,12 +1,19 @@
 import api from '../services/apiClient';
 
 export const dashboardApi = {
-  getSuperAdminStats: async () => {
+  /**
+   * Get dashboard stats for SuperAdmin
+   */
+  getSuperAdminStats: async (): Promise<any> => {
     const response = await api.get('/dashboard/superadmin');
-    return response.data;
+    return response.data?.data ?? response.data ?? {};
   },
-  getCampusStats: async (campusId: number) => {
+
+  /**
+   * Get dashboard stats for a specific campus
+   */
+  getCampusStats: async (campusId: number): Promise<any> => {
     const response = await api.get(`/dashboard/campus/${campusId}`);
-    return response.data;
+    return response.data?.data ?? response.data ?? {};
   }
 };

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../app/authStore';
 import { useAuthContextStore } from '../store/authContextStore';
 import { authApi } from '../api/authApi';
+import { getRoleLandingPath } from '../utils/rbac';
 import { Lock, Mail, Loader2 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
@@ -16,8 +17,6 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const from = location.state?.from?.pathname || '/dashboard';
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -25,25 +24,50 @@ export const LoginPage: React.FC = () => {
 
     try {
       const response = await authApi.login({ email, password });
-      setAuth(response.token, response.user);
       
-      // Initialize Auth Context
+      // Validate response structure
+      if (!response || !response.token || !response.user) {
+        throw new Error('Invalid login response - missing token or user data');
+      }
+
+      const { token, user } = response;
+      
+      // Ensure user roles are always a string array
+      const userRoles = Array.isArray(user.roles)
+        ? user.roles.map(r => String(r).toLowerCase())
+        : [];
+      
+      // Ensure campusIds is always an array
+      const campusIds = Array.isArray(user.campusIds) ? user.campusIds : [];
+      
+      // Set auth and context
+      setAuth(token, {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        roles: userRoles,
+      });
+      
       setUserContext({
         user: {
-          id: response.user.id,
-          name: response.user.fullName,
-          email: response.user.email,
-          roles: response.user.roles || [],
+          id: user.id,
+          name: user.fullName,
+          email: user.email,
+          roles: userRoles,
         },
-        schoolId: response.user.schoolId || 0,
-        campusIds: response.user.campusIds || [],
+        schoolId: user.schoolId || 0,
+        campusIds: campusIds,
         isAuthenticated: true,
       });
 
-      navigate(from, { replace: true });
+      const requestedPath = location.state?.from?.pathname;
+      const fallbackPath = getRoleLandingPath(userRoles);
+      const destination = requestedPath && requestedPath !== '/login' ? requestedPath : fallbackPath;
+      navigate(destination, { replace: true });
     } catch (err: any) {
-      const message = err.response?.data?.message || 'An error occurred during login';
+      const message = err.response?.data?.message || err.message || 'An error occurred during login';
       setError(message);
+      console.error('Login error:', err);
     } finally {
       setIsLoading(false);
     }
