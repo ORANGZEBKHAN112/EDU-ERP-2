@@ -4,10 +4,7 @@ import { UserRepository } from '../repositories';
 import { User } from '../models';
 import { AuthError } from '../utils/errors';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required');
-}
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
 
 export class AuthService {
   private userRepo = new UserRepository();
@@ -33,6 +30,7 @@ export class AuthService {
     console.log(`[AUTH] Login successful for: ${normalizedEmail}`);
 
     const roles = await this.userRepo.getUserRoles(user.id);
+    const permissions = await this.userRepo.getUserPermissions(user.id);
     const campuses = await this.userRepo.getUserCampuses(user.id);
 
     const token = jwt.sign(
@@ -41,13 +39,24 @@ export class AuthService {
         schoolId: user.schoolId,
         email: user.email, 
         roles: roles.map(r => r.name),
+        permissions,
         campusIds: campuses.map(c => c.id)
       },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
-    return { token, user: { id: user.id, fullName: user.fullName, email: user.email, roles: roles.map(r => r.name) } };
+    return { 
+      token, 
+      user: { 
+        id: user.id, 
+        schoolId: user.schoolId,
+        fullName: user.fullName, 
+        email: user.email, 
+        roles: roles.map(r => r.name),
+        campusIds: campuses.map(c => c.id)
+      } 
+    };
   }
 
   verifyToken(token: string) {

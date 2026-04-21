@@ -8,6 +8,7 @@ export interface IUserRepository {
   addUserRole(userId: number, roleId: number, transaction?: sql.Transaction): Promise<void>;
   addUserCampus(userId: number, campusId: number, transaction?: sql.Transaction): Promise<void>;
   getUserRoles(userId: number): Promise<Role[]>;
+  getUserPermissions(userId: number): Promise<string[]>;
   getUserCampuses(userId: number): Promise<Campus[]>;
   getUsersBySchool(schoolId: number | null): Promise<User[]>;
 }

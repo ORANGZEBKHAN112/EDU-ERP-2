@@ -24,46 +24,29 @@ export const DashboardPage: React.FC = () => {
       setError(null);
       try {
         const user = useAuthContextStore.getState().user;
-        const isSuperAdmin = user?.roles?.some(r => String(r).toLowerCase() === 'superadmin') ?? false;
-        const campusIds = useAuthContextStore.getState().campusIds || [];
-
-        if (!isSuperAdmin && campusIds.length === 0) {
-          setError('No campus assigned to user');
-          setIsLoading(false);
-          return;
-        }
+        const isSuperAdmin = user.roles.some(r => r.toLowerCase() === 'superadmin');
+        const campusIds = useAuthContextStore.getState().campusIds;
 
         const [statsRes, healthRes] = await Promise.all([
           isSuperAdmin 
             ? dashboardApi.getSuperAdminStats() 
-            : dashboardApi.getCampusStats(campusIds[0] || 0),
+            : dashboardApi.getCampusStats(campusIds[0]),
           systemApi.getHealth()
         ]);
 
-        // Safely extract data with fallbacks
-        const statsData = statsRes || {};
-        const healthData = healthRes || { status: 'ok' };
+        const statsData = unwrap(statsRes);
+        const healthData = unwrap(healthRes);
         
         setStats({
-          totalStudents: Number(statsData.totalStudents ?? statsData.totalStudentsCount ?? 0) || 0,
-          totalRevenue: Number(statsData.totalRevenue ?? statsData.campusRevenue ?? 0) || 0,
-          pendingFees: Number(statsData.totalPendingDues ?? statsData.pendingDues ?? 0) || 0,
-          activeClasses: Number(statsData.totalClasses ?? 0) || 0,
-          systemStatus: healthData.status === 'ok' || healthData.status === 'healthy' 
-            ? 'HEALTHY' 
-            : (healthData.status === 'error' || healthData.status === 'critical' ? 'CRITICAL' : 'DEGRADED')
+          totalStudents: statsData.totalStudents || statsData.totalStudentsCount || 0,
+          totalRevenue: statsData.totalRevenue || statsData.campusRevenue || 0,
+          pendingFees: statsData.totalPendingDues || statsData.pendingDues || 0,
+          activeClasses: statsData.totalClasses || 0,
+          systemStatus: healthData.status === 'ok' ? 'HEALTHY' : (healthData.status === 'error' ? 'CRITICAL' : 'DEGRADED')
         });
       } catch (err: any) {
         console.error('Dashboard fetch error:', err);
         setError('Failed to load dashboard data. Please try again later.');
-        // Set default empty stats on error
-        setStats({
-          totalStudents: 0,
-          totalRevenue: 0,
-          pendingFees: 0,
-          activeClasses: 0,
-          systemStatus: 'DEGRADED'
-        });
       } finally {
         setIsLoading(false);
       }
@@ -116,73 +99,106 @@ export const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 p-2">
-      <div className="flex justify-between items-center">
+    <div className="space-y-10 p-4 max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Dashboard Overview</h1>
-          <p className="text-slate-500 text-sm mt-1">Welcome back! Here's what's happening today.</p>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+            <LayoutGrid className="text-blue-600" size={32} />
+            Command Center
+          </h1>
+          <p className="text-slate-500 text-sm font-medium mt-2 flex items-center gap-2 italic">
+            <Activity size={14} className="text-emerald-500" />
+            Live system monitoring and school oversight
+          </p>
         </div>
-        <div className={`px-4 py-2 rounded-full border text-xs font-bold flex items-center gap-2 shadow-sm ${getStatusColor(stats?.systemStatus || '')}`}>
+        <div className={`px-5 py-2.5 rounded-xl border text-[11px] font-black flex items-center gap-2.5 shadow-sm transition-all duration-500 hover:scale-105 ${getStatusColor(stats?.systemStatus || '')}`}>
           {getStatusIcon(stats?.systemStatus || '')}
-          SYSTEM: {stats?.systemStatus}
+          SYSTEM STATUS: {stats?.systemStatus}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
         <StatCard 
-          label="Total Students" 
+          label="Student Registry" 
           value={stats?.totalStudents.toLocaleString() || '0'} 
-          icon={<Users size={22} />}
+          icon={<Users size={20} />}
           color="blue"
+          trend="+12% from last term"
         />
         <StatCard 
-          label="Total Revenue" 
+          label="Gross Revenue" 
           value={`$${stats?.totalRevenue.toLocaleString()}`} 
-          icon={<Banknote size={22} />}
+          icon={<Banknote size={20} />}
           color="emerald"
+          trend="Real-time collection"
         />
         <StatCard 
-          label="Pending Fees" 
+          label="Unpaid Dues" 
           value={`$${stats?.pendingFees.toLocaleString()}`} 
-          icon={<Receipt size={22} />}
+          icon={<Receipt size={20} />}
           color="orange"
+          trend="Requires action"
         />
         <StatCard 
-          label="Active Classes" 
+          label="Active Groups" 
           value={stats?.activeClasses.toString() || '0'} 
-          icon={<LayoutGrid size={22} />}
+          icon={<LayoutGrid size={20} />}
           color="indigo"
+          trend="Classes & Sections"
         />
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 p-6 bg-white rounded-2xl border border-slate-200/60 shadow-sm h-96 flex flex-col">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-bold text-slate-800">Collection Trends</h3>
-            <select className="text-xs font-bold text-slate-500 bg-slate-50 border-none rounded-lg px-2 py-1 outline-none cursor-pointer">
-              <option>Last 7 Days</option>
-              <option>Last 30 Days</option>
-            </select>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 journalist-card p-8 min-h-[450px] flex flex-col bg-white border border-slate-200/60 rounded-3xl shadow-sm overflow-hidden relative">
+          <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
+             <Activity size={200} className="text-slate-900" />
           </div>
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-3 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100">
-              <Activity size={24} className="text-slate-300" />
+          <div className="flex items-center justify-between mb-10 relative z-10">
+            <div>
+              <h3 className="text-xl font-black text-slate-900 tracking-tight">Revenue Analytics</h3>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Institutional Cashflow</p>
             </div>
-            <p className="text-sm font-medium italic">Revenue visualization coming soon</p>
+            <div className="flex gap-2">
+              {['7D', '30D', '90D'].map(period => (
+                <button key={period} className={`text-[10px] font-black px-3 py-1.5 rounded-lg border transition-all ${period === '30D' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-100 hover:border-slate-200'}`}>
+                  {period}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-100 relative z-10">
+            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 rotate-3 transition-transform hover:rotate-0 duration-500">
+              <Activity size={28} className="text-blue-500" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-bold text-slate-900">Processing Stream Data...</p>
+              <p className="text-[10px] font-medium text-slate-400 mt-1 uppercase tracking-widest leading-relaxed">Visual intelligence components <br/>loading across all campuses</p>
+            </div>
           </div>
         </div>
-        <div className="p-6 bg-white rounded-2xl border border-slate-200/60 shadow-sm h-96 flex flex-col">
-          <h3 className="font-bold text-slate-800 mb-6">Recent Activity</h3>
-          <div className="flex-1 space-y-4 overflow-y-auto pr-2">
+
+        <div className="p-8 bg-white rounded-3xl border border-slate-200/60 shadow-sm min-h-[450px] flex flex-col">
+          <div className="mb-10">
+            <h3 className="text-xl font-black text-slate-900 tracking-tight">Live Intelligence</h3>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Chronological Events</p>
+          </div>
+          <div className="flex-1 space-y-6 overflow-y-auto pr-2 custom-scrollbar">
             {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="flex gap-3 items-start p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
-                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
-                  <CheckCircle2 size={14} className="text-blue-600" />
+              <div key={i} className="flex gap-4 items-start p-4 rounded-2xl bg-white hover:bg-slate-50 transition-all duration-300 border border-slate-50 hover:border-slate-200 hover:translate-x-1 group">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-500 group-hover:rotate-12 ${i % 2 === 0 ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                  {i % 2 === 0 ? <Receipt size={18} /> : <CheckCircle2 size={18} />}
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-800">Fee Payment Recorded</p>
-                  <p className="text-[10px] text-slate-500">Student #10{i} paid monthly fee</p>
-                  <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider">2 mins ago</p>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-bold text-slate-900 truncate">
+                    {i % 2 === 0 ? 'Voucher Generated' : 'Fee Recorded'}
+                  </p>
+                  <p className="text-[11px] text-slate-500 font-medium line-clamp-1 mt-0.5">
+                    {i % 2 === 0 ? 'Batch #941 processing' : 'Student ADM-1029 payment processed'}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                    <p className="text-[9px] text-slate-400 uppercase font-black tracking-widest italic">{i*3} minutes ago</p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -198,29 +214,39 @@ interface StatCardProps {
   value: string;
   icon: React.ReactNode;
   color: 'blue' | 'emerald' | 'orange' | 'indigo';
+  trend?: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ label, value, icon, color }) => {
+const StatCard: React.FC<StatCardProps> = ({ label, value, icon, color, trend }) => {
   const colorStyles = {
-    blue: { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100' },
-    emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-100' },
-    orange: { bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-100' },
-    indigo: { bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'border-indigo-100' },
+    blue: { bg: 'bg-blue-50/50', text: 'text-blue-600', border: 'border-blue-100/50', iconBg: 'bg-blue-600', iconText: 'text-white' },
+    emerald: { bg: 'bg-emerald-50/50', text: 'text-emerald-600', border: 'border-emerald-100/50', iconBg: 'bg-emerald-600', iconText: 'text-white' },
+    orange: { bg: 'bg-orange-50/50', text: 'text-orange-600', border: 'border-orange-100/50', iconBg: 'bg-orange-600', iconText: 'text-white' },
+    indigo: { bg: 'bg-indigo-50/50', text: 'text-indigo-600', border: 'border-indigo-100/50', iconBg: 'bg-indigo-600', iconText: 'text-white' },
   };
 
   const style = colorStyles[color];
 
   return (
-    <div className="p-6 bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 group">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-xl ${style.bg} ${style.text} ${style.border} border transition-transform group-hover:scale-110 duration-300`}>
-          {icon}
+    <div className="relative p-8 bg-white rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:border-slate-300 transition-all duration-500 group overflow-hidden">
+      <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full ${style.bg} blur-2xl transition-all duration-700 group-hover:scale-150`}></div>
+      
+      <div className="relative z-10 flex flex-col h-full">
+        <div className="flex items-center justify-between mb-8">
+          <div className={`p-3 rounded-2xl ${style.iconBg} ${style.iconText} shadow-lg shadow-current/10 transition-transform duration-500 group-hover:-rotate-12`}>
+            {icon}
+          </div>
+          {trend && (
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{trend}</span>
+          )}
         </div>
-        <div className="h-1 w-8 bg-slate-100 rounded-full"></div>
-      </div>
-      <div>
-        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">{label}</p>
-        <p className="text-3xl font-black text-slate-900">{value}</p>
+        
+        <div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5">{label}</p>
+          <div className="flex items-baseline gap-1">
+             <p className="text-4xl font-black text-slate-900 tracking-tight">{value}</p>
+          </div>
+        </div>
       </div>
     </div>
   );

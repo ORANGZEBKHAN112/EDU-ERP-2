@@ -5,8 +5,8 @@ import { CreateStudentDto, UpdateStudentDto, StudentResponseDto } from '../../dt
 export class StudentService implements IStudentService {
   constructor(private studentRepo: IStudentRepository) {}
 
-  async getAllStudents(campusIds?: number[], schoolId?: number, filterCampusId?: number, search?: string): Promise<StudentResponseDto[]> {
-    const students = await this.studentRepo.getAll(campusIds, schoolId, filterCampusId, search);
+  async getAllStudents(campusIds?: number[], schoolId?: number, filterCampusId?: number, filterClassId?: number, search?: string): Promise<StudentResponseDto[]> {
+    const students = await this.studentRepo.getAll(campusIds, schoolId, filterCampusId, filterClassId, search);
     return students.map(s => this.mapToDto(s));
   }
 
@@ -42,7 +42,9 @@ export class StudentService implements IStudentService {
       id: student.id,
       schoolId: student.schoolId,
       campusId: student.campusId,
+      campusName: student.campusName,
       classId: student.classId,
+      className: student.className,
       admissionNo: student.admissionNo,
       fullName: student.fullName,
       fatherName: student.fatherName,

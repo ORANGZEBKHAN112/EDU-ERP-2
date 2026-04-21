@@ -25,7 +25,6 @@ const eventCtrl = container.financialEventController;
 const systemCtrl = container.systemController;
 const userCtrl = container.userController;
 const classCtrl = container.classController;
-const sectionCtrl = container.sectionController;
 
 // Controllers not yet refactored to Container (using legacy instantiation for now)
 const reportCtrl = new ReportController();
@@ -61,16 +60,9 @@ router.post('/campuses', authenticate, authorize(['SuperAdmin']), campusCtrl.cre
 router.put('/campuses/:id', authenticate, authorize(['SuperAdmin']), campusCtrl.updateCampus);
 
 // Classes
+router.get('/classes', authenticate, classCtrl.getAllClasses);
 router.get('/classes/:campusId', authenticate, checkCampusAccess, classCtrl.getClasses);
 router.post('/classes', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), classCtrl.createClass);
-
-// Sections
-router.get('/sections/class/:classId', authenticate, checkCampusAccess, sectionCtrl.getSectionsByClass);
-router.get('/sections/school/:schoolId', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), sectionCtrl.getSectionsBySchool);
-router.get('/sections/:id', authenticate, checkCampusAccess, sectionCtrl.getSectionById);
-router.post('/sections', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), sectionCtrl.createSection);
-router.put('/sections/:id', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), sectionCtrl.updateSection);
-router.delete('/sections/:id', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), sectionCtrl.deleteSection);
 
 // Students
 router.get('/students', authenticate, checkCampusAccess, studentCtrl.getStudents);
@@ -80,16 +72,21 @@ router.put('/students/:id', authenticate, authorize(['SuperAdmin', 'CampusAdmin'
 router.delete('/students/:id', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), studentCtrl.deleteStudent);
 
 // Fees
-router.post('/fees/structure', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), checkCampusAccess, feeCtrl.createFeeStructure);
+router.post('/fees/configure', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), feeCtrl.configure);
+router.get('/fees/configurations', authenticate, feeCtrl.getConfigurations);
 router.post('/fees/generate-vouchers', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), checkCampusAccess, feeCtrl.generateVouchers);
 router.get('/fees/ledger/:studentId', authenticate, checkCampusAccess, feeCtrl.getLedger);
+
+// Voucher compatibility routes
+router.post('/vouchers/generate', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), feeCtrl.generateVouchers);
+router.get('/vouchers', authenticate, feeCtrl.getVouchers);
 
 // Payments
 router.post('/payments/initiate', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), checkCampusAccess, paymentCtrl.initiate);
 
 // Dashboard
 router.get('/dashboard/superadmin', authenticate, authorize(['SuperAdmin']), dashboardCtrl.getSuperAdminStats);
-router.get('/dashboard/campus/:campusId', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), checkCampusAccess, dashboardCtrl.getCampusDashboard);
+router.get('/dashboard/campus/:campusId', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), dashboardCtrl.getCampusDashboard);
 
 // Reports
 router.get('/reports/superadmin/overview', authenticate, authorize(['SuperAdmin']), reportCtrl.getSuperAdminOverview);

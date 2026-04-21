@@ -15,7 +15,6 @@ import { FailedTransactionRepository } from './repositories/implementations/Fail
 import { SystemRepository } from './repositories/implementations/SystemRepository';
 import { UsageRepository } from './repositories';
 import { ClassRepository } from './repositories/implementations/ClassRepository';
-import { SectionRepository } from './repositories/implementations/SectionRepository';
 
 // Services
 import { AuthService } from './services/implementations/AuthService';
@@ -45,7 +44,6 @@ import { FinancialEventController } from './controllers/implementations/Financia
 import { SystemController } from './controllers/implementations/SystemController';
 import { UserController } from './controllers/implementations/UserController';
 import { ClassController } from './controllers/implementations/ClassController';
-import { SectionController } from './controllers/implementations/SectionController';
 
 export class DependencyContainer {
   // Repositories
@@ -66,7 +64,6 @@ export class DependencyContainer {
   public usageRepo = new UsageRepository();
   public subRepo = new SubscriptionRepository();
   public classRepo = new ClassRepository();
-  public sectionRepo = new SectionRepository();
 
   // Services
   public authService = new AuthService(this.userRepo);
@@ -102,7 +99,6 @@ export class DependencyContainer {
   public systemController = new SystemController(this.healthService);
   public userController = new UserController(this.userRepo, this.roleRepo);
   public classController = new ClassController(this.classRepo);
-  public sectionController = new SectionController(this.sectionRepo);
 }
 
 export const container = new DependencyContainer();

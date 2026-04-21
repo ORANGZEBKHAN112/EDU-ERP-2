@@ -46,26 +46,51 @@ export class SummaryRepository implements ISummaryRepository {
     const pool = await poolPromise;
     const result = await pool.request().query(`
       SELECT 
-        ISNULL(SUM(TotalRevenue), 0) as totalRevenue,
-        ISNULL(SUM(TotalPending), 0) as totalPendingDues,
-        ISNULL(SUM(TotalStudents), 0) as totalStudents,
-        CASE WHEN SUM(TotalRevenue + TotalPending) > 0 
-             THEN (SUM(TotalRevenue) * 100.0 / SUM(TotalRevenue + TotalPending)) 
-             ELSE 0 END as collectionRate
-      FROM CampusMonthlySummary
+        (SELECT ISNULL(SUM(AmountPaid), 0) FROM Payments WHERE PaymentStatus = 'Completed') as totalRevenue,
+        (SELECT ISNULL(SUM(ClosingBalance), 0) FROM StudentFeeLedger WHERE LedgerId IN (
+          SELECT MAX(LedgerId) FROM StudentFeeLedger GROUP BY StudentId, Month
+        )) as totalPendingDues,
+        (SELECT COUNT(*) FROM Students WHERE IsActive = 1) as totalStudents,
+        (SELECT COUNT(*) FROM Classes) as totalClasses
     `);
-    return result.recordset[0];
+    
+    const stats = result.recordset[0];
+    const totalPotential = stats.totalRevenue + stats.totalPendingDues;
+    
+    return {
+      ...stats,
+      collectionRate: totalPotential > 0 ? (stats.totalRevenue * 100.0 / totalPotential) : 0
+    };
   }
 
   async getMonthlyRevenueTrend(): Promise<any[]> {
     const pool = await poolPromise;
     const result = await pool.request().query(`
-      SELECT Month as month, SUM(TotalRevenue) as revenue
-      FROM CampusMonthlySummary
+      SELECT 
+        Month as month, 
+        SUM(AmountPaid) as revenue
+      FROM Payments p
+      JOIN FeeVouchers v ON p.VoucherId = v.VoucherId
+      WHERE p.PaymentStatus = 'Completed'
       GROUP BY Month
       ORDER BY Month ASC
     `);
-    return result.recordset;
+    
+    // If no payments yet, try to get from summary or return empty
+    if (result.recordset.length === 0) {
+      const summaryResult = await pool.request().query(`
+        SELECT Month as month, SUM(TotalRevenue) as revenue
+        FROM CampusMonthlySummary
+        GROUP BY Month
+        ORDER BY Month ASC
+      `);
+      return summaryResult.recordset;
+    }
+    
+    return result.recordset.map(r => ({
+      month: r.month,
+      revenue: parseFloat(r.revenue)
+    }));
   }
 
   async getCampusStats(campusId: number): Promise<any> {
@@ -74,12 +99,17 @@ export class SummaryRepository implements ISummaryRepository {
       .input('campusId', sql.Int, campusId)
       .query(`
         SELECT 
-          ISNULL(SUM(TotalRevenue), 0) as campusRevenue,
-          ISNULL(SUM(TotalPending), 0) as pendingDues,
-          ISNULL(SUM(PaidStudents), 0) as paidStudentsCount,
-          ISNULL(SUM(UnpaidStudents), 0) as unpaidStudentsCount
-        FROM CampusMonthlySummary
-        WHERE CampusId = @campusId
+          (SELECT ISNULL(SUM(p.AmountPaid), 0) 
+           FROM Payments p 
+           JOIN FeeVouchers v ON p.VoucherId = v.VoucherId 
+           WHERE v.CampusId = @campusId AND p.PaymentStatus = 'Completed') as campusRevenue,
+          (SELECT ISNULL(SUM(l.ClosingBalance), 0) 
+           FROM StudentFeeLedger l 
+           WHERE l.CampusId = @campusId AND l.LedgerId IN (
+             SELECT MAX(LedgerId) FROM StudentFeeLedger GROUP BY StudentId, Month
+           )) as pendingDues,
+          (SELECT COUNT(*) FROM Students WHERE CampusId = @campusId AND IsActive = 1) as totalStudentsCount,
+          (SELECT COUNT(*) FROM Classes WHERE CampusId = @campusId) as totalClasses
       `);
     return result.recordset[0];
   }

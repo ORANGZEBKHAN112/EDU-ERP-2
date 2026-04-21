@@ -9,7 +9,7 @@ export async function initializeDatabase() {
   
   const migrations = [
     'CreateTables.sql',
-    // 'SeedData.sql', // Temporarily disabled for QA testing
+    'SeedData.sql',
     'SaaSLayer.sql',
     'BankingGradeUpgrade.sql',
     'AddFinancialTraceTable.sql',
@@ -18,7 +18,9 @@ export async function initializeDatabase() {
     'HardenEvents.sql',
     'SaaSProductionLayer.sql',
     'UpgradeFeeEngine.sql',
-    'DashboardOptimization.sql'
+    'DashboardOptimization.sql',
+    'HierarchicalRBAC.sql',
+    'RBAC_Functions.sql'
   ];
 
   for (const file of migrations) {

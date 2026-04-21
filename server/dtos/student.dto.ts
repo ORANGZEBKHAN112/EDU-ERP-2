@@ -21,7 +21,9 @@ export interface StudentResponseDto {
   id: number;
   schoolId: number;
   campusId: number;
+  campusName?: string;
   classId: number;
+  className?: string;
   admissionNo: string;
   fullName: string;
   fatherName: string;

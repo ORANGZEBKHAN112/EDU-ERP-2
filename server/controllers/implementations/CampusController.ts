@@ -7,13 +7,25 @@ export class CampusController {
   getCampuses = async (req: any, res: Response, next: NextFunction) => {
     try {
       const schoolId = req.user?.schoolId;
-      let campuses;
-      if (schoolId) {
+      const campusIds = req.user?.campusIds || [];
+      const roles = req.user?.roles || [];
+      const isSuperAdmin = roles.some((r: string) => r.toLowerCase() === 'superadmin');
+
+      let campuses: any[];
+      if (isSuperAdmin) {
+        campuses = await this.schoolService.getAllCampuses();
+      } else if (schoolId) {
         campuses = await this.schoolService.getCampusesBySchool(schoolId);
       } else {
         campuses = await this.schoolService.getAllCampuses();
       }
-      res.json({ success: true, data: campuses });
+
+      // Final filter for users with restricted campus assignments
+      if (!isSuperAdmin && campusIds.length > 0) {
+        campuses = campuses.filter((c: any) => campusIds.includes(c.id));
+      }
+
+      res.json(campuses);
     } catch (err) {
       next(err);
     }
@@ -21,12 +33,8 @@ export class CampusController {
 
   getBySchool = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const schoolId = parseInt(req.params.schoolId);
-      if (!schoolId) {
-        return res.status(400).json({ success: false, message: 'schoolId is required' });
-      }
-      const campuses = await this.schoolService.getCampusesBySchool(schoolId);
-      res.json({ success: true, data: campuses });
+      const campuses = await this.schoolService.getCampusesBySchool(parseInt(req.params.schoolId));
+      res.json(campuses);
     } catch (err) {
       next(err);
     }
@@ -34,17 +42,8 @@ export class CampusController {
 
   createCampus = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      if (!req.body.schoolId || !req.body.campusName) {
-        return res.status(400).json({ success: false, message: 'schoolId and campusName are required' });
-      }
-      const campus = await this.schoolService.createCampus({
-        schoolId: req.body.schoolId,
-        name: req.body.campusName,
-        state: req.body.state,
-        city: req.body.city,
-        address: req.body.address
-      });
-      res.status(201).json({ success: true, data: campus });
+      const campus = await this.schoolService.createCampus(req.body);
+      res.json(campus);
     } catch (err) {
       next(err);
     }
@@ -52,12 +51,8 @@ export class CampusController {
 
   updateCampus = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const campusId = parseInt(req.params.id);
-      if (!campusId) {
-        return res.status(400).json({ success: false, message: 'id is required' });
-      }
-      const campus = await this.schoolService.updateCampus(campusId, req.body);
-      res.json({ success: true, data: campus });
+      const campus = await this.schoolService.updateCampus(parseInt(req.params.id), req.body);
+      res.json(campus);
     } catch (err) {
       next(err);
     }

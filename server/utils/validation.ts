@@ -24,17 +24,19 @@ export const updateStudentSchema = z.object({
 });
 
 export const generateVouchersSchema = z.object({
-  campusId: z.number(),
-  month: z.string().regex(/^\d{4}-\d{2}$/, "Format must be YYYY-MM"),
+  campusId: z.number().optional(),
+  month: z.union([
+    z.string().regex(/^\d{4}-\d{2}$/),
+    z.number()
+  ]).optional(),
+  year: z.number().optional()
 });
 
-export const createFeeStructureSchema = z.object({
-  campusId: z.number(),
+export const configureFeeSchema = z.object({
   classId: z.number(),
-  monthlyFee: z.number().min(0),
-  transportFee: z.number().min(0),
-  examFee: z.number().min(0),
-  effectiveFromMonth: z.string().regex(/^\d{4}-\d{2}$/, "Format must be YYYY-MM"),
+  monthlyFee: z.number(),
+  transportFee: z.number().optional(),
+  campusId: z.number().optional()
 });
 
 export const initiatePaymentSchema = z.object({

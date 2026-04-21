@@ -95,6 +95,17 @@ export class UserRepository implements IUserRepository {
     }));
   }
 
+  async getUserPermissions(userId: number): Promise<string[]> {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('userId', sql.Int, userId)
+      .query(`SELECT DISTINCT p.PermissionName FROM Permissions p
+              INNER JOIN RolePermissions rp ON p.PermissionId = rp.PermissionId
+              INNER JOIN UserRoles ur ON rp.RoleId = ur.RoleId
+              WHERE ur.UserId = @userId`);
+    return result.recordset.map(r => r.PermissionName);
+  }
+
   async getUserCampuses(userId: number): Promise<Campus[]> {
     const pool = await poolPromise;
     const result = await pool.request()

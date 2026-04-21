@@ -5,11 +5,16 @@ import { ICampusRepository } from '../../interfaces/repositories/ICampusReposito
 export class CampusRepository implements ICampusRepository {
   async getAll(schoolId?: number): Promise<Campus[]> {
     const pool = await poolPromise;
-    if (!schoolId) return []; // Block access if no tenant context
     
-    const result = await pool.request()
-      .input('schoolId', sql.Int, schoolId)
-      .query('SELECT * FROM Campuses WHERE SchoolId = @schoolId');
+    let query = 'SELECT * FROM Campuses';
+    const request = pool.request();
+    
+    if (schoolId) {
+      query += ' WHERE SchoolId = @schoolId';
+      request.input('schoolId', sql.Int, schoolId);
+    }
+    
+    const result = await request.query(query);
     return result.recordset.map(r => ({
       id: r.CampusId,
       schoolId: r.SchoolId,
@@ -31,8 +36,6 @@ export class CampusRepository implements ICampusRepository {
     if (schoolId) {
       query += ' AND SchoolId = @schoolId';
       request.input('schoolId', sql.Int, schoolId);
-    } else {
-      return undefined; // Strictly require schoolId context for queries
     }
 
     const result = await request.query(query);

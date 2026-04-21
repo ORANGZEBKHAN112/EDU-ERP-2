@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { container } from '../container';
 import { AppError } from '../utils/errors';
 import { ZodError } from 'zod';
+import { hasPermission } from '../utils/rbac';
 
 export const authenticate = (req: any, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
@@ -76,13 +77,43 @@ export const checkCampusAccess = (req: any, res: Response, next: NextFunction) =
   if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
   
   // SuperAdmin has access to all
-  if (req.user.roles.includes('SuperAdmin')) return next();
+  const isSuperAdmin = (req.user.roles || []).some((r: string) => r.toLowerCase() === 'superadmin');
+  if (isSuperAdmin) return next();
 
   const requestedCampusId = req.query.campusId || req.body.campusId || req.params.campusId;
   if (requestedCampusId && !req.user.campusIds.includes(parseInt(requestedCampusId))) {
     return res.status(403).json({ message: 'Forbidden: No access to this campus' });
   }
   next();
+};
+
+/**
+ * Middleware to check for a specific permission with dynamic scoping
+ */
+export const requirePermission = (permission: string) => {
+  return async (req: any, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return next(new AppError('Authentication required', 401));
+    }
+
+    const { schoolId, campusId, classId, sectionId } = req.params;
+    
+    // Attempt to resolve scope from params, body, or query
+    const scope = {
+      schoolId: parseInt(schoolId || req.body.schoolId || req.query.schoolId) || undefined,
+      campusId: parseInt(campusId || req.body.campusId || req.query.campusId) || undefined,
+      classId: parseInt(classId || req.body.classId || req.query.classId) || undefined,
+      sectionId: parseInt(sectionId || req.body.sectionId || req.query.sectionId) || undefined
+    };
+
+    const allowed = await hasPermission(req.user.id, permission, scope);
+    
+    if (!allowed) {
+      return next(new AppError(`Forbidden: Missing permission ${permission} for the requested scope`, 403));
+    }
+
+    next();
+  };
 };
 
 export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {

@@ -2,11 +2,39 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
 @layer base {
+  :root {
+    --app-bg: #F8FAFC;
+    --card-bg: #FFFFFF;
+    --sidebar-bg: #0F172A;
+    --accent: #2563EB;
+    --ink: #0F172A;
+    --ink-muted: #64748B;
+  }
+
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply bg-[var(--app-bg)] text-[var(--ink)] antialiased selection:bg-blue-100 selection:text-blue-900;
+  }
+}
+
+@layer components {
+  .specialist-card {
+    @apply bg-[var(--card-bg)] border border-slate-200/60 rounded-xl shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300;
+  }
+
+  .data-grid-header {
+    @apply font-sans italic text-[10px] uppercase tracking-wider text-slate-400 font-bold px-4 py-3 border-b border-slate-100;
+  }
+
+  .data-grid-row {
+    @apply border-b border-slate-50 hover:bg-slate-50/80 transition-colors duration-150;
+  }
+
+  .mono-id {
+    @apply font-mono text-[11px] tracking-tight bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-medium;
   }
 }
 
@@ -20,9 +48,9 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-700 rounded-full;
+  @apply bg-slate-300 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-600;
+  @apply bg-slate-400;
 }
