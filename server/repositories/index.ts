@@ -1133,23 +1133,32 @@ export class SummaryRepository {
 
   async getPaymentInsights() {
     const pool = await poolPromise;
-    const daily = await pool.request().query(`
-      SELECT CAST(CreatedAt AS DATE) as date, SUM(AmountPaid) as amount
-      FROM FeePayments
-      GROUP BY CAST(CreatedAt AS DATE)
-      ORDER BY date ASC
-    `);
-    
-    const methods = await pool.request().query(`
-      SELECT PaymentMethod as method, SUM(AmountPaid) as amount
-      FROM FeePayments
-      GROUP BY PaymentMethod
-    `);
+    try {
+      console.log('[RepoIndex] getPaymentInsights: running daily collections query (Payments)');
+      const daily = await pool.request().query(`
+        SELECT CAST(PaidAt AS DATE) as date, SUM(AmountPaid) as amount
+        FROM Payments
+        GROUP BY CAST(PaidAt AS DATE)
+        ORDER BY date ASC
+      `);
+      console.log('[RepoIndex] daily rows=', daily.recordset.length);
 
-    return {
-      dailyCollections: daily.recordset,
-      methodBreakdown: methods.recordset
-    };
+      console.log('[RepoIndex] getPaymentInsights: running method breakdown query (Payments)');
+      const methods = await pool.request().query(`
+        SELECT PaymentMethod as method, SUM(AmountPaid) as amount
+        FROM Payments
+        GROUP BY PaymentMethod
+      `);
+      console.log('[RepoIndex] methods rows=', methods.recordset.length);
+
+      return {
+        dailyCollections: daily.recordset,
+        methodBreakdown: methods.recordset
+      };
+    } catch (err: any) {
+      console.error('[RepoIndex] getPaymentInsights ERROR', err);
+      throw err;
+    }
   }
 }
 

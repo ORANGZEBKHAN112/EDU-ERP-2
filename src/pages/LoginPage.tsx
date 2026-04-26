@@ -4,6 +4,7 @@ import { useAuthStore } from '../app/authStore';
 import { useAuthContextStore } from '../store/authContextStore';
 import { authApi } from '../api/authApi';
 import { getRoleLandingPath } from '../utils/rbac';
+import { campusApi } from '../api/campusApi';
 import { Lock, Mail, Loader2 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
@@ -47,7 +48,17 @@ export const LoginPage: React.FC = () => {
         email: user.email,
         roles: userRoles,
       });
-      
+      // If SuperAdmin, fetch all campuses so they can view/manage across tenants
+      let effectiveCampusIds = campusIds;
+      if (userRoles.includes('superadmin')) {
+        try {
+          const camps = await campusApi.getAll();
+          effectiveCampusIds = camps.map((c: any) => c.id);
+        } catch (err) {
+          console.warn('Failed to fetch campuses for SuperAdmin');
+        }
+      }
+
       setUserContext({
         user: {
           id: user.id,
@@ -56,7 +67,7 @@ export const LoginPage: React.FC = () => {
           roles: userRoles,
         },
         schoolId: user.schoolId || 0,
-        campusIds: campusIds,
+        campusIds: effectiveCampusIds,
         isAuthenticated: true,
       });
 

@@ -33,7 +33,7 @@ async function testLogin() {
   
   const credentials = {
     email: 'admin@eduflow.com',
-    password: 'password'
+    password: 'Test123!'
   };
   
   try {
@@ -54,6 +54,18 @@ async function testLogin() {
     
     // Set auth header for subsequent requests
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+    // If no campusIds provided in token, fetch campuses (SuperAdmin case) and populate
+    if ((!campusIds || campusIds.length === 0)) {
+      try {
+        const campsRes = await api.get('/campuses');
+        const camps = Array.isArray(campsRes.data) ? campsRes.data : (campsRes.data?.data || []);
+        campusIds = camps.map((c: any) => c.id);
+        console.log('   Populated campusIds from /campuses:', campusIds);
+      } catch (err) {
+        console.warn('   Could not fetch campuses to populate campusIds:', err?.message || err);
+      }
+    }
     
     return true;
   } catch (error: any) {

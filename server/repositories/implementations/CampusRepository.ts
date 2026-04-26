@@ -5,11 +5,18 @@ import { ICampusRepository } from '../../interfaces/repositories/ICampusReposito
 export class CampusRepository implements ICampusRepository {
   async getAll(schoolId?: number): Promise<Campus[]> {
     const pool = await poolPromise;
-    if (!schoolId) return []; // Block access if no tenant context
-    
-    const result = await pool.request()
-      .input('schoolId', sql.Int, schoolId)
-      .query('SELECT * FROM Campuses WHERE SchoolId = @schoolId');
+    console.log('[CampusRepository] getAll called with schoolId=', schoolId);
+    let result;
+    if (!schoolId) {
+      // No tenant context - return all campuses for SuperAdmin/system views
+      result = await pool.request().query('SELECT * FROM Campuses');
+      console.log('[CampusRepository] queried all campuses, rows=', result.recordset.length);
+    } else {
+      result = await pool.request()
+        .input('schoolId', sql.Int, schoolId)
+        .query('SELECT * FROM Campuses WHERE SchoolId = @schoolId');
+      console.log('[CampusRepository] queried campuses by schoolId, rows=', result.recordset.length);
+    }
     return result.recordset.map(r => ({
       id: r.CampusId,
       schoolId: r.SchoolId,

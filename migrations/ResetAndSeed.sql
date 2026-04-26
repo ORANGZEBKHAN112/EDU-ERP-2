@@ -205,9 +205,9 @@ INSERT INTO Payments (SchoolId, VoucherId, StudentId, AmountPaid, PaymentMethod,
 
 -- Insert Test Users
 INSERT INTO Users (FullName, Email, PasswordHash, Phone, IsActive) VALUES
-('Campus Admin User', 'campusadmin@eduflow.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcg7b3XeKeUxWdeS86E36P4/KFm', '03009876543', 1),
-('Principal User', 'principal@eduflow.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcg7b3XeKeUxWdeS86E36P4/KFm', '03009876544', 1),
-('Finance Admin', 'finance@eduflow.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcg7b3XeKeUxWdeS86E36P4/KFm', '03009876545', 1);
+('Campus Admin User', 'campusadmin@eduflow.com', '$2b$10$AU8yHas7ilMnjI9zCigyuu5REe/BDW2bbaCH50W3y22V7MmYNnnLG', '03009876543', 1),
+('Principal User', 'principal@eduflow.com', '$2b$10$AU8yHas7ilMnjI9zCigyuu5REe/BDW2bbaCH50W3y22V7MmYNnnLG', '03009876544', 1),
+('Finance Admin', 'finance@eduflow.com', '$2b$10$AU8yHas7ilMnjI9zCigyuu5REe/BDW2bbaCH50W3y22V7MmYNnnLG', '03009876545', 1);
 
 -- Get User IDs
 DECLARE @CampusAdminId INT;

@@ -108,22 +108,31 @@ export class SummaryRepository implements ISummaryRepository {
 
   async getPaymentInsights(): Promise<any> {
     const pool = await poolPromise;
-    const daily = await pool.request().query(`
-      SELECT CAST(PaidAt AS DATE) as date, SUM(AmountPaid) as amount
-      FROM Payments
-      GROUP BY CAST(PaidAt AS DATE)
-      ORDER BY date ASC
-    `);
-    
-    const methods = await pool.request().query(`
-      SELECT PaymentMethod as method, SUM(AmountPaid) as amount
-      FROM Payments
-      GROUP BY PaymentMethod
-    `);
+    try {
+      console.log('[SummaryRepository] getPaymentInsights: running daily collections query');
+      const daily = await pool.request().query(`
+        SELECT CAST(PaidAt AS DATE) as date, SUM(AmountPaid) as amount
+        FROM Payments
+        GROUP BY CAST(PaidAt AS DATE)
+        ORDER BY date ASC
+      `);
+      console.log('[SummaryRepository] daily rows=', daily.recordset.length);
 
-    return {
-      dailyCollections: daily.recordset,
-      methodBreakdown: methods.recordset
-    };
+      console.log('[SummaryRepository] getPaymentInsights: running method breakdown query');
+      const methods = await pool.request().query(`
+        SELECT PaymentMethod as method, SUM(AmountPaid) as amount
+        FROM Payments
+        GROUP BY PaymentMethod
+      `);
+      console.log('[SummaryRepository] methods rows=', methods.recordset.length);
+
+      return {
+        dailyCollections: daily.recordset,
+        methodBreakdown: methods.recordset
+      };
+    } catch (err: any) {
+      console.error('[SummaryRepository] getPaymentInsights ERROR', err);
+      throw err;
+    }
   }
 }
