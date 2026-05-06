@@ -47,7 +47,7 @@ export function normalizeResponse<T = any>(response: any): StandardResponse<T> {
   if (Array.isArray(response)) {
     return {
       success: true,
-      data: response
+      data: response as T
     };
   }
 
