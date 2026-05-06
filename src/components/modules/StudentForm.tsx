@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { campusApi } from '../../api/campusApi';
 import { classApi } from '../../api/classApi';
 import { useAppStore } from '../../store/appStore';
+import { useAuthContextStore } from '../../store/authContextStore';
 import { unwrap } from '../../utils/apiHelper';
 import { Loader2 } from 'lucide-react';
 
@@ -19,6 +20,8 @@ export const StudentForm: React.FC<StudentFormProps> = ({
   isSubmitting 
 }) => {
   const { campuses, classes, setCampuses, setClasses } = useAppStore();
+  const schoolId = useAuthContextStore((state) => state.schoolId);
+  const campusIds = useAuthContextStore((state) => state.campusIds);
   const [formData, setFormData] = useState({
     fullName: initialData?.fullName || '',
     admissionNo: initialData?.admissionNo || '',
@@ -39,7 +42,7 @@ export const StudentForm: React.FC<StudentFormProps> = ({
       try {
         const [campusesRes, classesRes] = await Promise.all([
           campusApi.getAll(),
-          classApi.getAll()
+          classApi.getAll(Number(schoolId), Number(campusIds?.[0]))
         ]);
         setCampuses(unwrap(campusesRes));
         setClasses(unwrap(classesRes));
