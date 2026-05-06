@@ -15,6 +15,11 @@ export class DashboardService implements IDashboardService {
   }
 
   async getCampusDashboard(campusId: number) {
-    return this.summaryRepo.getCampusStats(campusId);
+    const stats = await this.summaryRepo.getCampusStats(campusId);
+    const trend = await this.summaryRepo.getCampusRevenueTrend(campusId);
+    return {
+      ...stats,
+      monthlyRevenueTrend: trend
+    };
   }
 }

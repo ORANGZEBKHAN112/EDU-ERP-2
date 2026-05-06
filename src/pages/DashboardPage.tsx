@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { dashboardApi } from '../api/dashboardApi';
 import { systemApi } from '../api/systemApi';
-import { unwrap } from '../utils/apiHelper';
 import { useAuthContextStore } from '../store/authContextStore';
 import { Users, Activity, AlertCircle, CheckCircle2, Loader2, Banknote, Receipt, LayoutGrid } from 'lucide-react';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 interface DashboardStats {
   totalStudents: number;
@@ -11,12 +11,14 @@ interface DashboardStats {
   pendingFees: number;
   activeClasses: number;
   systemStatus: 'HEALTHY' | 'DEGRADED' | 'CRITICAL';
+  monthlyRevenueTrend?: Array<{ month: string; revenue: number }>;
 }
 
 export const DashboardPage: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -33,11 +35,12 @@ export const DashboardPage: React.FC = () => {
           return;
         }
 
-        const [statsRes, healthRes] = await Promise.all([
+        const [statsRes, healthRes, auditRes] = await Promise.all([
           isSuperAdmin 
             ? dashboardApi.getSuperAdminStats() 
             : dashboardApi.getCampusStats(campusIds[0] || 0),
-          systemApi.getHealth()
+          systemApi.getHealth(),
+          systemApi.getAuditLogs(5)
         ]);
 
         // Safely extract data with fallbacks
@@ -51,8 +54,10 @@ export const DashboardPage: React.FC = () => {
           activeClasses: Number(statsData.totalClasses ?? 0) || 0,
           systemStatus: healthData.status === 'ok' || healthData.status === 'healthy' 
             ? 'HEALTHY' 
-            : (healthData.status === 'error' || healthData.status === 'critical' ? 'CRITICAL' : 'DEGRADED')
+            : (healthData.status === 'error' || healthData.status === 'critical' ? 'CRITICAL' : 'DEGRADED'),
+          monthlyRevenueTrend: Array.isArray(statsData.monthlyRevenueTrend) ? statsData.monthlyRevenueTrend : []
         });
+        setRecentActivity(auditRes || []);
       } catch (err: any) {
         console.error('Dashboard fetch error:', err);
         setError('Failed to load dashboard data. Please try again later.');
@@ -64,6 +69,7 @@ export const DashboardPage: React.FC = () => {
           activeClasses: 0,
           systemStatus: 'DEGRADED'
         });
+        setRecentActivity([]);
       } finally {
         setIsLoading(false);
       }
@@ -164,25 +170,38 @@ export const DashboardPage: React.FC = () => {
               <option>Last 30 Days</option>
             </select>
           </div>
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-3 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100">
-              <Activity size={24} className="text-slate-300" />
-            </div>
-            <p className="text-sm font-medium italic">Revenue visualization coming soon</p>
+          <div className="flex-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={stats?.monthlyRevenueTrend || []} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                <defs>
+                  <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Area type="monotone" dataKey="revenue" stroke="#059669" fill="url(#revenueGradient)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
         <div className="p-6 bg-white rounded-2xl border border-slate-200/60 shadow-sm h-96 flex flex-col">
           <h3 className="font-bold text-slate-800 mb-6">Recent Activity</h3>
           <div className="flex-1 space-y-4 overflow-y-auto pr-2">
-            {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="flex gap-3 items-start p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
+            {recentActivity.map((log) => (
+              <div key={log.id} className="flex gap-3 items-start p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
                 <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
                   <CheckCircle2 size={14} className="text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-800">Fee Payment Recorded</p>
-                  <p className="text-[10px] text-slate-500">Student #10{i} paid monthly fee</p>
-                  <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider">2 mins ago</p>
+                  <p className="text-xs font-bold text-slate-800">{log.action}</p>
+                  <p className="text-[10px] text-slate-500">{log.userName || log.userEmail || 'System'}</p>
+                  <p className="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider">
+                    {new Date(log.timestamp).toLocaleString()}
+                  </p>
                 </div>
               </div>
             ))}

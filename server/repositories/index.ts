@@ -729,6 +729,28 @@ export class AuditRepository {
       .query(`INSERT INTO AuditLogs (UserId, Action, BeforeState, AfterState, CampusId, EventType, TransactionId, CorrelationId) 
               VALUES (@userId, @action, @beforeState, @afterState, @campusId, @eventType, @transactionId, @correlationId)`);
   }
+
+  async getRecent(limit = 100) {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('limit', sql.Int, limit)
+      .query(`
+        SELECT TOP (@limit)
+          a.AuditId as id,
+          a.Action as action,
+          a.CreatedAt as timestamp,
+          a.EventType as eventType,
+          a.TransactionId as transactionId,
+          a.CorrelationId as correlationId,
+          a.CampusId as campusId,
+          u.FullName as userName,
+          u.Email as userEmail
+        FROM AuditLogs a
+        LEFT JOIN Users u ON u.UserId = a.UserId
+        ORDER BY a.CreatedAt DESC
+      `);
+    return result.recordset;
+  }
 }
 
 export class JobRepository {
@@ -1161,4 +1183,3 @@ export class SummaryRepository {
     }
   }
 }
-
