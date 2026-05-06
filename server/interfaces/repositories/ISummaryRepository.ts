@@ -5,6 +5,7 @@ export interface ISummaryRepository {
   getSuperAdminStats(): Promise<any>;
   getMonthlyRevenueTrend(): Promise<any[]>;
   getCampusStats(campusId: number): Promise<any>;
+  getCampusRevenueTrend(campusId: number): Promise<any[]>;
   getDefaulters(): Promise<any[]>;
   getPaymentInsights(): Promise<any>;
 }

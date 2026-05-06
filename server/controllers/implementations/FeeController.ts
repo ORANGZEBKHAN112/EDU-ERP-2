@@ -52,4 +52,35 @@ export class FeeController {
       next(err);
     }
   };
+
+  getConfigurations = async (req: any, res: Response, next: NextFunction) => {
+    try {
+      const campusId = Number(req.query.campusId || req.user.campusIds?.[0]);
+      const ctx: RequestContext = {
+        schoolId: req.user.schoolId,
+        campusIds: req.user.campusIds,
+        userId: req.user.id
+      };
+      const configs = await this.feeService.getFeeConfigurations(ctx, campusId);
+      res.json({ success: true, data: configs });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getVouchers = async (req: any, res: Response, next: NextFunction) => {
+    try {
+      const campusId = Number(req.query.campusId || req.user.campusIds?.[0]);
+      const month = req.query.month ? String(req.query.month) : undefined;
+      const ctx: RequestContext = {
+        schoolId: req.user.schoolId,
+        campusIds: req.user.campusIds,
+        userId: req.user.id
+      };
+      const vouchers = await this.feeService.getVouchers(ctx, campusId, month);
+      res.json({ success: true, data: vouchers });
+    } catch (err) {
+      next(err);
+    }
+  };
 }

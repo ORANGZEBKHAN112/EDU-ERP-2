@@ -41,6 +41,7 @@ router.get('/roles', authenticate, userCtrl.getRoles);
 
 // System Health
 router.get('/system/health', systemCtrl.getHealth);
+router.get('/system/audit-logs', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), systemCtrl.getAuditLogs);
 
 // Tenants
 router.get('/tenants', authenticate, authorize(['SuperAdmin']), tenantCtrl.getTenants);
@@ -62,7 +63,10 @@ router.put('/campuses/:id', authenticate, authorize(['SuperAdmin']), campusCtrl.
 
 // Classes
 router.get('/classes/:campusId', authenticate, checkCampusAccess, classCtrl.getClasses);
+router.get('/classes/id/:id', authenticate, checkCampusAccess, classCtrl.getClassById);
 router.post('/classes', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), classCtrl.createClass);
+router.put('/classes/:id', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), classCtrl.updateClass);
+router.delete('/classes/:id', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), classCtrl.deleteClass);
 
 // Sections
 router.get('/sections/class/:classId', authenticate, checkCampusAccess, sectionCtrl.getSectionsByClass);
@@ -83,6 +87,8 @@ router.delete('/students/:id', authenticate, authorize(['SuperAdmin', 'CampusAdm
 router.post('/fees/structure', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), checkCampusAccess, feeCtrl.createFeeStructure);
 router.post('/fees/generate-vouchers', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), checkCampusAccess, feeCtrl.generateVouchers);
 router.get('/fees/ledger/:studentId', authenticate, checkCampusAccess, feeCtrl.getLedger);
+router.get('/fees/configurations', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), checkCampusAccess, feeCtrl.getConfigurations);
+router.get('/fees/vouchers', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), checkCampusAccess, feeCtrl.getVouchers);
 
 // Payments
 router.post('/payments/initiate', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), checkCampusAccess, paymentCtrl.initiate);

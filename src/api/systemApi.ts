@@ -12,4 +12,10 @@ export const systemApi = {
       return { status: 'error' };
     }
   },
+
+  getAuditLogs: async (limit = 100): Promise<any[]> => {
+    const response = await api.get('/system/audit-logs', { params: { limit } });
+    const payload = response.data?.data ?? response.data;
+    return Array.isArray(payload) ? payload : [];
+  },
 };

@@ -14,7 +14,7 @@ export const campusApi = {
    * Get campuses by school
    */
   getBySchool: async (schoolId: number): Promise<any[]> => {
-    const response = await api.get(`/campuses/school/${schoolId}`);
+    const response = await api.get(`/campuses/${schoolId}`);
     return normalizeArrayResponse(response.data?.data ?? response.data);
   },
 

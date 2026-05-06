@@ -18,8 +18,11 @@ import {
 import { toast } from 'sonner';
 import { ErrorState } from '../components/shared/ErrorState';
 import { Button } from '@/components/ui/button';
+import { useAuthContextStore } from '../store/authContextStore';
 
 export const FeesPage: React.FC = () => {
+  const schoolId = useAuthContextStore((state) => state.schoolId);
+  const campusIds = useAuthContextStore((state) => state.campusIds);
   const [activeTab, setActiveTab] = useState<'vouchers' | 'config'>('vouchers');
   const [classes, setClasses] = useState<any[]>([]);
   const [configs, setConfigs] = useState<any[]>([]);
@@ -41,11 +44,11 @@ export const FeesPage: React.FC = () => {
     setError(null);
     try {
       const [classesRes, configsRes, vouchersRes] = await Promise.all([
-        classApi.getAll(),
+        classApi.getAll(Number(schoolId), Number(campusIds?.[0])),
         feeApi.getConfigurations(),
         feeApi.getVouchers()
       ]);
-      setClasses(unwrapArray(classesRes));
+      setClasses(Array.isArray(classesRes) ? classesRes : unwrapArray(classesRes));
       setConfigs(unwrapArray(configsRes));
       setVouchers(unwrapArray(vouchersRes));
     } catch (err) {
