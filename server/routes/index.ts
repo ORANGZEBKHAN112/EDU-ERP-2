@@ -41,6 +41,7 @@ router.get('/roles', authenticate, userCtrl.getRoles);
 
 // System Health
 router.get('/system/health', systemCtrl.getHealth);
+router.get('/system/audit-logs', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), systemCtrl.getAuditLogs);
 
 // Tenants
 router.get('/tenants', authenticate, authorize(['SuperAdmin']), tenantCtrl.getTenants);
