@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '../utils/format';
+import { systemApi } from '../api/systemApi';
 
 interface AuditLog {
   id: string;
@@ -31,66 +32,26 @@ export const AuditLogPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Mocking audit logs as requested
-    const mockLogs: AuditLog[] = [
-      {
-        id: 'LOG-8821',
-        action: 'Payment Recorded',
-        user: 'Orangzeb K.',
-        role: 'FinanceAdmin',
-        timestamp: new Date().toISOString(),
-        details: 'Fee payment of PKR 15,000 for Student ID #2024-001 recorded via Cash.',
-        status: 'Success',
-        module: 'Finance'
-      },
-      {
-        id: 'LOG-8822',
-        action: 'Voucher Generation',
-        user: 'System Scheduler',
-        role: 'System',
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        details: 'Automated monthly fee vouchers generated for 450 students in Main Campus.',
-        status: 'Success',
-        module: 'Fees'
-      },
-      {
-        id: 'LOG-8823',
-        action: 'User Profile Updated',
-        user: 'Admin Support',
-        role: 'SuperAdmin',
-        timestamp: new Date(Date.now() - 7200000).toISOString(),
-        details: 'Updated permission set for User ID #admin-4. Access level increased.',
-        status: 'Warning',
-        module: 'Identity'
-      },
-      {
-        id: 'LOG-8824',
-        action: 'Failed Login Attempt',
-        user: 'Unknown (IP: 192.168.1.45)',
-        role: 'Guest',
-        timestamp: new Date(Date.now() - 10800000).toISOString(),
-        details: 'Too many failed login attempts for email: test@school.pk. IP temporary blocked.',
-        status: 'Critical',
-        module: 'Security'
-      },
-      {
-        id: 'LOG-8825',
-        action: 'Scholarship Applied',
-        user: 'Finance Manager',
-        role: 'FinanceAdmin',
-        timestamp: new Date(Date.now() - 14400000).toISOString(),
-        details: 'Applied 25% Merit Scholarship to Student ID #2024-089. Authorization confirmed.',
-        status: 'Success',
-        module: 'Finance'
+    const fetchLogs = async () => {
+      setIsLoading(true);
+      try {
+        const apiLogs = await systemApi.getAuditLogs(200);
+        const mapped: AuditLog[] = apiLogs.map((log: any) => ({
+          id: String(log.id),
+          action: log.action || 'Unknown Action',
+          user: log.userName || log.userEmail || 'System',
+          role: 'System',
+          timestamp: log.timestamp,
+          details: `EventType: ${log.eventType || 'N/A'} • CorrelationId: ${log.correlationId || 'N/A'}`,
+          status: String(log.action || '').toLowerCase().includes('failed') ? 'Critical' : 'Success',
+          module: log.eventType || 'Audit'
+        }));
+        setLogs(mapped);
+      } finally {
+        setIsLoading(false);
       }
-    ];
-
-    const timer = setTimeout(() => {
-      setLogs(mockLogs);
-      setIsLoading(false);
-    }, 800);
-
-    return () => clearTimeout(timer);
+    };
+    fetchLogs();
   }, []);
 
   const getStatusColor = (status: string) => {

@@ -1,1 +1,12 @@
-import { Section } from '../../models';\n\nexport interface ISectionRepository {\n  getAll(): Promise<Section[]>;\n  getBySchool(schoolId: number): Promise<Section[]>;\n  getByClass(classId: number): Promise<Section[]>;\n  getByClassStrict(classId: number, schoolId: number): Promise<Section[]>;\n  getById(id: number): Promise<Section | undefined>;\n  create(item: Partial<Section>): Promise<Section>;\n  update(id: number, item: Partial<Section>): Promise<Section>;\n  delete(id: number, schoolId?: number): Promise<boolean>;\n}\n
+import { Section } from '../../models';
+
+export interface ISectionRepository {
+  getAll(): Promise<Section[]>;
+  getBySchool(schoolId: number): Promise<Section[]>;
+  getByClass(classId: number): Promise<Section[]>;
+  getByClassStrict(classId: number, schoolId: number): Promise<Section[]>;
+  getById(id: number): Promise<Section | undefined>;
+  create(item: Partial<Section>): Promise<Section>;
+  update(id: number, item: Partial<Section>): Promise<Section>;
+  delete(id: number, schoolId?: number): Promise<boolean>;
+}

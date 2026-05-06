@@ -84,6 +84,20 @@ export class SummaryRepository implements ISummaryRepository {
     return result.recordset[0];
   }
 
+  async getCampusRevenueTrend(campusId: number): Promise<any[]> {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('campusId', sql.Int, campusId)
+      .query(`
+        SELECT Month as month, SUM(TotalRevenue) as revenue
+        FROM CampusMonthlySummary
+        WHERE CampusId = @campusId
+        GROUP BY Month
+        ORDER BY Month ASC
+      `);
+    return result.recordset;
+  }
+
   async getDefaulters(): Promise<any[]> {
     const pool = await poolPromise;
     const result = await pool.request().query(`
