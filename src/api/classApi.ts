@@ -30,7 +30,7 @@ export const classApi = {
    */
   getById: async (id: number): Promise<any> => {
     try {
-      const response = await api.get(`/classes/${id}`);
+      const response = await api.get(`/classes/id/${id}`);
       return response.data?.data ?? response.data;
     } catch (error: any) {
       console.error('❌ Error fetching class:', error.message);
@@ -82,9 +82,9 @@ export const classApi = {
   /**
    * Delete a class
    */
-  delete: async (id: number): Promise<boolean> => {
+  delete: async (id: number, schoolId?: number): Promise<boolean> => {
     try {
-      const response = await api.delete(`/classes/${id}`);
+      const response = await api.delete(`/classes/${id}`, { data: schoolId ? { schoolId } : {} });
       return response.data?.success ?? true;
     } catch (error: any) {
       console.error('❌ Error deleting class:', error.message);

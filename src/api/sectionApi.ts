@@ -52,7 +52,7 @@ export const sectionApi = {
       schoolId,
       campusId,
       classId,
-      sectionName,
+      name: sectionName,
       ...injectTenantContext({}, context)
     });
     return response.data?.data ?? response.data;
@@ -68,7 +68,7 @@ export const sectionApi = {
     }
     const context = useAuthContextStore.getState();
     const response = await api.put(`/sections/${id}`, {
-      sectionName,
+      name: sectionName,
       ...injectTenantContext({ schoolId }, context)
     });
     return response.data?.data ?? response.data;
@@ -81,7 +81,7 @@ export const sectionApi = {
     if (!id || !schoolId) {
       throw new Error('id and schoolId are required');
     }
-    const response = await api.delete(`/sections/${id}`);
+    const response = await api.delete(`/sections/${id}`, { data: { schoolId } });
     return response.data?.success ?? true;
   },
 };

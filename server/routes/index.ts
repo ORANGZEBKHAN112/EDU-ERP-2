@@ -63,7 +63,10 @@ router.put('/campuses/:id', authenticate, authorize(['SuperAdmin']), campusCtrl.
 
 // Classes
 router.get('/classes/:campusId', authenticate, checkCampusAccess, classCtrl.getClasses);
+router.get('/classes/id/:id', authenticate, checkCampusAccess, classCtrl.getClassById);
 router.post('/classes', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), classCtrl.createClass);
+router.put('/classes/:id', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), classCtrl.updateClass);
+router.delete('/classes/:id', authenticate, authorize(['SuperAdmin', 'CampusAdmin']), classCtrl.deleteClass);
 
 // Sections
 router.get('/sections/class/:classId', authenticate, checkCampusAccess, sectionCtrl.getSectionsByClass);
