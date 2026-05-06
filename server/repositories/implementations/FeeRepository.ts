@@ -65,6 +65,47 @@ export class FeeRepository implements IFeeRepository {
     };
   }
 
+  async getStructuresByCampus(campusId: number): Promise<FeeStructure[]> {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('campusId', sql.Int, campusId)
+      .query('SELECT * FROM FeeStructure WHERE CampusId = @campusId ORDER BY ClassId ASC');
+    return result.recordset.map(r => ({
+      id: r.FeeStructureId,
+      campusId: r.CampusId,
+      classId: r.ClassId,
+      monthlyFee: r.MonthlyFee,
+      transportFee: r.TransportFee,
+      examFee: r.ExamFee,
+      effectiveFromMonth: r.EffectiveFromMonth
+    }));
+  }
+
+  async getVouchersByCampus(campusId: number, month?: string): Promise<any[]> {
+    const pool = await poolPromise;
+    const request = pool.request().input('campusId', sql.Int, campusId);
+    const monthFilter = month ? ' AND v.Month = @month' : '';
+    if (month) request.input('month', sql.NVarChar, month);
+    const result = await request.query(`
+      SELECT v.*, s.FullName as StudentName
+      FROM FeeVouchers v
+      INNER JOIN Students s ON s.StudentId = v.StudentId
+      WHERE v.CampusId = @campusId ${monthFilter}
+      ORDER BY v.GeneratedAt DESC
+    `);
+    return result.recordset.map(r => ({
+      id: r.VoucherId,
+      studentId: r.StudentId,
+      studentName: r.StudentName,
+      campusId: r.CampusId,
+      month: r.Month,
+      totalAmount: r.TotalAmount,
+      dueDate: r.DueDate,
+      status: r.Status,
+      generatedAt: r.GeneratedAt
+    }));
+  }
+
   async createVouchersBulk(vouchers: any[], transaction?: sql.Transaction): Promise<any[]> {
     if (vouchers.length === 0) return [];
 

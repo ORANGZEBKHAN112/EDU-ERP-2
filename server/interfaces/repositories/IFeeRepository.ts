@@ -14,6 +14,8 @@ export interface IFeeRepository {
   createAdjustment(adj: any, transaction?: sql.Transaction): Promise<any>;
   getPaymentByRef(ref: string): Promise<Payment | undefined>;
   getAllPayments(campusIds?: number[]): Promise<Payment[]>;
+  getStructuresByCampus(campusId: number): Promise<FeeStructure[]>;
+  getVouchersByCampus(campusId: number, month?: string): Promise<any[]>;
   createVouchersBulk(vouchers: any[], transaction?: sql.Transaction): Promise<FeeVoucher[]>;
   getVouchersBulk(studentIds: number[], month: string): Promise<FeeVoucher[]>;
   getStructuresBulk(classIds: number[], campusId: number): Promise<FeeStructure[]>;

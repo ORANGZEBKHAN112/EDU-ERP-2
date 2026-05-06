@@ -7,4 +7,6 @@ export interface IFeeService {
   getStudentLedger(ctx: RequestContext, studentId: number): Promise<any[]>;
   getStudentBalance(ctx: RequestContext, studentId: number): Promise<number>;
   createFeeStructure(ctx: RequestContext, dto: CreateFeeStructureDto): Promise<FeeStructure>;
+  getFeeConfigurations(ctx: RequestContext, campusId: number): Promise<FeeStructure[]>;
+  getVouchers(ctx: RequestContext, campusId: number, month?: string): Promise<any[]>;
 }

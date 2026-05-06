@@ -87,6 +87,8 @@ router.delete('/students/:id', authenticate, authorize(['SuperAdmin', 'CampusAdm
 router.post('/fees/structure', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), checkCampusAccess, feeCtrl.createFeeStructure);
 router.post('/fees/generate-vouchers', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), checkCampusAccess, feeCtrl.generateVouchers);
 router.get('/fees/ledger/:studentId', authenticate, checkCampusAccess, feeCtrl.getLedger);
+router.get('/fees/configurations', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), checkCampusAccess, feeCtrl.getConfigurations);
+router.get('/fees/vouchers', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), checkCampusAccess, feeCtrl.getVouchers);
 
 // Payments
 router.post('/payments/initiate', authenticate, authorize(['SuperAdmin', 'FinanceAdmin']), checkCampusAccess, paymentCtrl.initiate);

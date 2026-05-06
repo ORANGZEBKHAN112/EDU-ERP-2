@@ -453,4 +453,18 @@ export class FeeService implements IFeeService {
       effectiveFromMonth: dto.effectiveFromMonth
     });
   }
+
+  async getFeeConfigurations(ctx: RequestContext, campusId: number): Promise<FeeStructure[]> {
+    if (ctx.campusIds.length > 0 && !ctx.campusIds.includes(campusId)) {
+      throw new BusinessRuleError('Access denied to this campus');
+    }
+    return this.feeRepo.getStructuresByCampus(campusId);
+  }
+
+  async getVouchers(ctx: RequestContext, campusId: number, month?: string): Promise<any[]> {
+    if (ctx.campusIds.length > 0 && !ctx.campusIds.includes(campusId)) {
+      throw new BusinessRuleError('Access denied to this campus');
+    }
+    return this.feeRepo.getVouchersByCampus(campusId, month);
+  }
 }
