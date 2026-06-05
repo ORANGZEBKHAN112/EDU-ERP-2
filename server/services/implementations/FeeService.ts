@@ -20,19 +20,26 @@ export class FeeService implements IFeeService {
   ) {}
 
   async generateVouchers(ctx: RequestContext, dto: GenerateVouchersDto) {
-    const { campusId, month } = dto;
-    
-    if (ctx.campusIds.length > 0 && !ctx.campusIds.includes(campusId)) {
-      throw new BusinessRuleError('Access denied to this campus');
+    const { campusId, studentIds, month } = dto as any;
+
+    let students: any[] = [];
+
+    if (Array.isArray(studentIds) && studentIds.length > 0) {
+      students = await this.studentRepo.getByIds(studentIds, ctx.campusIds, ctx.schoolId);
+      if (!students || students.length === 0) {
+        return [];
+      }
+    } else if (typeof campusId === 'number') {
+      if (ctx.campusIds.length > 0 && !ctx.campusIds.includes(campusId)) {
+        throw new BusinessRuleError('Access denied to this campus');
+      }
+      students = await this.studentRepo.getAll([campusId]);
+    } else {
+      throw new BusinessRuleError('Invalid generate vouchers payload');
     }
 
-    // For large datasets (>100 students), use optimized batch processing
-    const students = await this.studentRepo.getAll([campusId]);
     // Temporarily disable batch processing to test sequential
-    // if (students.length > 10) {
-    //   return this.generateVouchersBatchOptimized(ctx, dto, students);
-    // }
-    return this.generateVouchersSequential(ctx, dto, students);
+    return this.generateVouchersSequential(ctx, { month } as any, students);
   }
 
   private async generateVouchersSequential(ctx: RequestContext, dto: GenerateVouchersDto, students: any[]) {

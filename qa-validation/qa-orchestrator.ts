@@ -32,7 +32,7 @@ const DB_CONFIG = {
 
 const BASE_URL = 'http://localhost:3001/api';
 const SUPER_ADMIN_EMAIL = 'admin@eduflow.com';
-const SUPER_ADMIN_PASSWORD = 'admin123';  // Correct password from SeedData
+const SUPER_ADMIN_PASSWORD = 'Test123!';  // Updated to match current admin password
 
 // ============================================================================
 // STATE MANAGEMENT
@@ -350,12 +350,17 @@ async function testCreateCampuses(): Promise<void> {
         address: `${campusName}, Pakistan`,
       });
 
+      console.log('DEBUG /campuses response:', JSON.stringify(response.data).substring(0, 300));
+
       const duration = performance.now() - startTime;
       const { success, data } = response.data;
 
-      if (!success || !data?.campusId) throw new Error('Invalid response structure');
+      // Accept multiple possible id shapes returned by the API (campusId, id, CampusId)
+      const campusId = data?.campusId || data?.id || data?.CampusId;
 
-      state.testData.campusIds.push(data.campusId);
+      if (!success || !campusId) throw new Error('Invalid response structure');
+
+      state.testData.campusIds.push(campusId);
 
       recordResult(
         `Create Campus: ${campusName}`,
@@ -370,6 +375,7 @@ async function testCreateCampuses(): Promise<void> {
         'FAIL',
         `Campus creation failed: ${err.message || err.response?.data?.message}`
       );
+      if (err.response?.data) console.log('DEBUG /campuses error response:', JSON.stringify(err.response.data).substring(0,300));
       throw err;
     }
   }
@@ -390,16 +396,19 @@ async function testCreateClasses(): Promise<void> {
 
         const duration = performance.now() - startTime;
         const { success, data } = response.data;
+        console.log('DEBUG /classes response:', JSON.stringify(response.data).substring(0,300));
 
-        if (!success || !data?.classId) throw new Error('Invalid response structure');
+        const classId = data?.classId || data?.id || data?.ClassId;
 
-        state.testData.classIds.push(data.classId);
+        if (!success || !classId) throw new Error('Invalid response structure');
+
+        state.testData.classIds.push(classId);
 
         if (i === 1) {
           recordResult(
             `Create Classes (Campus ${campusId})`,
             'PASS',
-            `Created Class 1 (ID: ${data.classId})`,
+            `Created Class 1 (ID: ${classId})`,
             data,
             duration
           );
@@ -441,22 +450,24 @@ async function testCreateSections(): Promise<void> {
           schoolId: state.testData.schoolId,
           campusId,
           classId,
-          sectionName,
+          name: sectionName,
         });
 
         const duration = performance.now() - startTime;
         const { success, data } = response.data;
+        console.log('DEBUG /sections response:', JSON.stringify(response.data).substring(0,300));
 
-        if (!success || !data?.sectionId) throw new Error('Invalid response structure');
+        const sectionId = data?.sectionId || data?.id || data?.SectionId;
+        if (!success || !sectionId) throw new Error('Invalid response structure');
 
-        state.testData.sectionIds.push(data.sectionId);
+        state.testData.sectionIds.push(sectionId);
         sectionCount++;
 
         if (sectionCount <= 2) {
           recordResult(
             `Create Section: ${sectionName}`,
             'PASS',
-            `Section created (ID: ${data.sectionId})`,
+            `Section created (ID: ${sectionId})`,
             data,
             duration
           );
@@ -467,6 +478,7 @@ async function testCreateSections(): Promise<void> {
           'FAIL',
           `Section creation failed: ${err.message || err.response?.data?.message}`
         );
+          if (err.response?.data) console.log('DEBUG /sections error response full:', JSON.stringify(err.response.data, null, 2).substring(0,2000));
         throw err;
       }
     }

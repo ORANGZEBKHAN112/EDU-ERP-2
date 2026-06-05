@@ -32,7 +32,7 @@ export class FeeController {
       };
       
       const vouchers = await this.feeService.generateVouchers(ctx, validated);
-      res.json({ message: `Generated ${vouchers.length} vouchers`, vouchers });
+      res.json({ success: true, message: `Generated ${vouchers.length} vouchers`, data: vouchers });
     } catch (err: any) {
       next(err);
     }

@@ -5,7 +5,8 @@ export interface RequestContext {
 }
 
 export interface GenerateVouchersDto {
-  campusId: number;
+  campusId?: number;
+  studentIds?: number[];
   month: string;
 }
 

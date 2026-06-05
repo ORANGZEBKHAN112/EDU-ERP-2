@@ -79,9 +79,6 @@ export class ClassRepository implements IClassRepository {
    * Requires both schoolId and campusId
    */
   async create(item: Partial<Class>): Promise<Class> {
-    if (!item.schoolId) {
-      throw new Error('schoolId is required to create a class');
-    }
     if (!item.campusId) {
       throw new Error('campusId is required to create a class');
     }
@@ -90,12 +87,13 @@ export class ClassRepository implements IClassRepository {
     }
 
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('schoolId', sql.Int, item.schoolId)
+    const request = pool.request()
       .input('campusId', sql.Int, item.campusId)
       .input('name', sql.NVarChar, item.name)
-      .query(`INSERT INTO Classes (SchoolId, CampusId, ClassName) 
-              OUTPUT INSERTED.*, (SELECT SchoolId FROM Campuses WHERE CampusId = INSERTED.CampusId) as SchoolId
+      .input('schoolId', sql.Int, item.schoolId);
+
+    const result = await request.query(`INSERT INTO Classes (SchoolId, CampusId, ClassName) 
+              OUTPUT INSERTED.*
               VALUES (@schoolId, @campusId, @name)`);
     
     const r = result.recordset[0];
@@ -136,7 +134,7 @@ export class ClassRepository implements IClassRepository {
       .input('name', sql.NVarChar, item.name)
       .query(`UPDATE Classes 
               SET ClassName = COALESCE(@name, ClassName)
-              OUTPUT INSERTED.*, (SELECT SchoolId FROM Campuses WHERE CampusId = INSERTED.CampusId) as SchoolId
+              OUTPUT INSERTED.*
               WHERE ClassId = @id`);
     
     const r = updateResult.recordset[0];

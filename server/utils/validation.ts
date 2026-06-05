@@ -23,10 +23,16 @@ export const updateStudentSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export const generateVouchersSchema = z.object({
-  campusId: z.number(),
-  month: z.string().regex(/^\d{4}-\d{2}$/, "Format must be YYYY-MM"),
-});
+export const generateVouchersSchema = z
+  .object({
+    campusId: z.number().optional(),
+    studentIds: z.array(z.number()).optional(),
+    month: z.string().regex(/^\d{4}-\d{2}$/, "Format must be YYYY-MM"),
+  })
+  .refine((val) => !!val.campusId || (Array.isArray(val.studentIds) && val.studentIds.length > 0), {
+    message: 'Either campusId or studentIds (non-empty) must be provided',
+    path: ['campusId', 'studentIds'],
+  });
 
 export const createFeeStructureSchema = z.object({
   campusId: z.number(),

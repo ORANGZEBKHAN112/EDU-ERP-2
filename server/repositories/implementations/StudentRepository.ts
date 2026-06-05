@@ -102,6 +102,47 @@ export class StudentRepository implements IStudentRepository {
     };
   }
 
+  async getByIds(ids: number[], campusIds?: number[], schoolId?: number): Promise<Student[]> {
+    const pool = await poolPromise;
+    const request = pool.request();
+
+    const sanitized = ids.map(v => Number(v)).filter(v => Number.isInteger(v));
+    if (sanitized.length === 0) return [];
+
+    const idParams = sanitized.map((value, index) => {
+      const name = `id${index}`;
+      request.input(name, sql.Int, value);
+      return `@${name}`;
+    }).join(',');
+
+    let query = `SELECT s.*, c.SchoolId FROM Students s INNER JOIN Campuses c ON s.CampusId = c.CampusId WHERE s.StudentId IN (${idParams})`;
+
+    const isSuperAdminAccess = (!campusIds || campusIds.length === 0) && !schoolId;
+
+    if (schoolId && !isSuperAdminAccess) {
+      query += ' AND c.SchoolId = @schoolId';
+      request.input('schoolId', sql.Int, schoolId);
+    }
+
+    if (campusIds && campusIds.length > 0 && !isSuperAdminAccess) {
+      const campusClause = this.buildIntInClause(campusIds, 'campusId', request);
+      query += ` AND s.CampusId IN (${campusClause})`;
+    }
+
+    const result = await request.query(query);
+    return result.recordset.map(r => ({
+      id: r.StudentId,
+      schoolId: r.SchoolId,
+      campusId: r.CampusId,
+      classId: r.ClassId,
+      admissionNo: r.AdmissionNo,
+      fullName: r.FullName,
+      fatherName: r.FatherName,
+      phone: r.Phone,
+      isActive: r.IsActive
+    }));
+  }
+
   async create(item: Partial<Student>): Promise<Student> {
     const pool = await poolPromise;
     const result = await pool.request()

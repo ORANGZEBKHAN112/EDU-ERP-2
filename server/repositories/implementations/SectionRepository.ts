@@ -112,13 +112,16 @@ export class SectionRepository implements ISectionRepository {
     const pool = await poolPromise;
 
     // Verify classId belongs to the same school and campus
+    // Allow SchoolId to be present either on the Classes row or on the Campuses row
     const verifyResult = await pool.request()
       .input('classId', sql.Int, item.classId)
       .input('campusId', sql.Int, item.campusId)
       .input('schoolId', sql.Int, item.schoolId)
-      .query(`SELECT ClassId FROM Classes 
-              WHERE ClassId = @classId AND CampusId = @campusId AND SchoolId = @schoolId`);
-    
+      .query(`SELECT c.ClassId FROM Classes c
+              LEFT JOIN Campuses cp ON c.CampusId = cp.CampusId
+              WHERE c.ClassId = @classId
+                AND c.CampusId = @campusId
+                AND (cp.SchoolId = @schoolId OR c.SchoolId = @schoolId)`);
     if (verifyResult.recordset.length === 0) {
       throw new Error('Class not found or does not belong to the specified school/campus');
     }

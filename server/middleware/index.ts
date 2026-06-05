@@ -104,8 +104,10 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
   }
 
   console.error('[FATAL ERROR]', err);
+  const isProd = process.env.NODE_ENV === 'production';
   res.status(500).json({ 
     status: 'error',
-    message: 'Internal Server Error' 
+    message: isProd ? 'Internal Server Error' : (err.message || 'Internal Server Error'),
+    ...(isProd ? {} : { stack: err.stack })
   });
 };

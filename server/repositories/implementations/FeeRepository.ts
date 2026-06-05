@@ -130,6 +130,7 @@ export class FeeRepository implements IFeeRepository {
 
       createdVouchers.push({
         id: result.recordset[0].VoucherId,
+        voucherId: result.recordset[0].VoucherId,
         studentId: result.recordset[0].StudentId,
         campusId: result.recordset[0].CampusId,
         month: result.recordset[0].Month,
@@ -160,7 +161,8 @@ export class FeeRepository implements IFeeRepository {
 
     return result.recordset.map(r => ({
       id: r.VoucherId,
-      studentId: r.StudentId,
+        voucherId: r.VoucherId,
+        studentId: r.StudentId,
       campusId: r.CampusId,
       month: r.Month,
       totalAmount: r.TotalAmount,
@@ -232,7 +234,8 @@ export class FeeRepository implements IFeeRepository {
     if (!r) return undefined;
     return {
       id: r.VoucherId,
-      studentId: r.StudentId,
+        voucherId: r.VoucherId,
+        studentId: r.StudentId,
       campusId: r.CampusId,
       month: r.Month,
       totalAmount: r.TotalAmount,
@@ -258,7 +261,8 @@ export class FeeRepository implements IFeeRepository {
     if (!r) return undefined;
     return {
       id: r.VoucherId,
-      studentId: r.StudentId,
+        voucherId: r.VoucherId,
+        studentId: r.StudentId,
       campusId: r.CampusId,
       month: r.Month,
       totalAmount: r.TotalAmount,
