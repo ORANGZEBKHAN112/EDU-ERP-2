@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "codex:post-task": "node scripts/codex-post-task-agent.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",
